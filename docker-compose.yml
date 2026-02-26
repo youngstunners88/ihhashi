@@ -1,154 +1,88 @@
 version: '3.8'
 
 services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: ihhashi-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ihhashi
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-ihhashi_dev_2024}
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: ihhashi-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ihhashi-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - MONGODB_URL=mongodb://mongo:27017
+      - ENVIRONMENT=development
+      - MONGODB_URL=mongodb://ihhashi:${MONGO_PASSWORD:-ihhashi_dev_2024}@mongodb:27017
+      - DB_NAME=ihhashi
       - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - PAYSTACK_SECRET_KEY=${PAYSTACK_SECRET_KEY}
-      - PAYSTACK_PUBLIC_KEY=${PAYSTACK_PUBLIC_KEY}
-      - YOCO_SECRET_KEY=${YOCO_SECRET_KEY}
-      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
-      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
-      - SENTRY_DSN=${SENTRY_DSN:-https://25a5585d096a411495f93126742fbf73@app.glitchtip.com/20760}
-      - POSTHOG_API_KEY=${POSTHOG_API_KEY}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - DEBUG=${DEBUG:-true}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
-    depends_on:
-      mongo:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_change_in_production}
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
     volumes:
       - ./backend:/app
       - /app/__pycache__
-    networks:
-      - ihhashi-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  # Frontend (React + Vite)
+  # Frontend (Vite React)
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: ihhashi-frontend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000/api
-      - VITE_SUPABASE_URL=${SUPABASE_URL}
-      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - VITE_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-      - VITE_POSTHOG_KEY=${POSTHOG_API_KEY}
+      - VITE_API_URL=http://localhost:8000/api/v1
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    networks:
-      - ihhashi-network
     depends_on:
       - backend
     command: npm run dev -- --host
 
-  # MongoDB Database
-  mongo:
-    image: mongo:7
-    container_name: ihhashi-mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-    networks:
-      - ihhashi-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    command: --bind_ip_all
-
-  # Redis for caching and rate limiting
-  redis:
-    image: redis:7-alpine
-    container_name: ihhashi-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - ihhashi-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    command: redis-server --appendonly yes
-
-  # GlitchTip (Self-hosted error tracking - Sentry alternative)
-  # Uncomment if you want self-hosted GlitchTip
-  # glitchtip:
-  #   image: glitchtip/glitchtip:latest
-  #   container_name: ihhashi-glitchtip
-  #   ports:
-  #     - "8001:8000"
-  #   environment:
-  #     - SECRET_KEY=${GLITCHTIP_SECRET_KEY}
-  #     - PORT=8000
-  #     - EMAIL_URL=console://
-  #     - GLITCHTIP_DOMAIN=http://localhost:8001
-  #     - DEFAULT_FROM_EMAIL=noreply@ihhashi.co.za
-  #   networks:
-  #     - ihhashi-network
-  #   volumes:
-  #     - glitchtip_data:/data
-
-  # Nginx reverse proxy (production only)
-  nginx:
-    image: nginx:alpine
-    container_name: ihhashi-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    networks:
-      - ihhashi-network
-    depends_on:
-      - backend
-      - frontend
-    profiles:
-      - production
-
 volumes:
   mongodb_data:
   redis_data:
-  # glitchtip_data:
 
 networks:
-  ihhashi-network:
-    driver: bridge
+  default:
+    name: ihhashi-network

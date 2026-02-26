@@ -1,10 +1,26 @@
 # iHhashi
 
-> Food delivery platform for South Africa, inspired by Ele.me
+> **Delivery platform for South Africa** - Groceries, Food, Fruits, Vegetables, Dairy Products, and Personal Courier Services
 
 **Started**: 2026-02-25
 **Status**: Development
 **Repository**: `/home/workspace/iHhashi`
+
+---
+
+## ⚠️ IMPORTANT CLARIFICATION
+
+**iHhashi IS:**
+- Grocery delivery (supermarkets, spaza shops)
+- Food delivery (restaurants, takeaways)
+- Fresh produce delivery (fruits, vegetables)
+- Dairy product delivery (milk, cheese, yogurt, etc.)
+- Personal courier services (packages, documents, parcels)
+
+**iHhashi is NOT:**
+- ❌ A taxi/ride-hailing app
+- ❌ A passenger transport service
+- ❌ Related to Boober or any taxi platform
 
 ---
 
