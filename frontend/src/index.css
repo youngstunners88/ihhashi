@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #FF6B35;
+  --primary-dark: #E55A2B;
+  --secondary: #00A86B;
+  --background: #FAFAFA;
+  --surface: #FFFFFF;
+  --text: #1A1A1A;
+  --text-secondary: #666666;
+  --border: #E5E5E5;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--background);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[#FF6B35] text-white font-semibold py-3 px-6 rounded-xl transition-all hover:bg-[#E55A2B];
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 font-medium py-3 px-6 rounded-xl transition-all hover:bg-gray-200;
+  }
+  
+  .input {
+    @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:border-[#FF6B35] focus:ring-2 focus:ring-[#FF6B35]/20 outline-none transition-all;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl p-3 shadow-sm border border-gray-100;
+  }
+}
