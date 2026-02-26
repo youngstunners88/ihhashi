@@ -72,6 +72,22 @@ class ProductTemplate(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+# Alias for backwards compatibility
+Product = ProductTemplate
+
+
+class ProductCreate(BaseModel):
+    """Schema for creating a new product"""
+    name: str
+    description: str
+    category: str
+    price: float
+    merchant_id: str
+    quantity_available: int = 0
+    images: List[str] = []
+    tags: List[str] = []
+
+
 class Review(BaseModel):
     """Customer review for product/vendor/delivery"""
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))

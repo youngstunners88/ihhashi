@@ -1,8 +1,15 @@
 # Sprint Backlog
 
-## Current Sprint: Core Business Routes
+## Current Sprint: Production Readiness
 
 ### ✅ Completed (2026-02-26)
+
+#### Security Hardening
+- [x] Secure config in `backend/app/core/config.py`
+- [x] Security middleware (headers, request validation, timing)
+- [x] Webhook signature verification
+- [x] Updated .gitignore with secrets protection
+- [x] Security scan (ShieldGuard) - 0 critical issues
 
 #### Orders Routes
 - [x] Create order with competitive bidding
@@ -44,6 +51,18 @@
 - [x] Groq API integration
 - [x] Intent detection
 - [x] Translation
+
+#### Infrastructure
+- [x] Docker Compose for local development
+- [x] Backend Dockerfile
+- [x] Frontend Dockerfile (dev)
+- [x] CI/CD pipeline (GitHub Actions)
+- [x] .env.example with all required variables
+
+#### Documentation
+- [x] SA Launch Playbook created
+- [x] Step-by-step Feb 28 launch guide
+- [x] South Africa specific considerations
 
 ---
 

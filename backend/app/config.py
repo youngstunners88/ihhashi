@@ -1,17 +1,22 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, List
 
 
 class Settings(BaseSettings):
+    # Environment
+    environment: str = "development"
+    debug: bool = True
+    
     # Database
     mongodb_url: str = "mongodb://localhost:27017"
     db_name: str = "ihhashi"
     
     # Security
-    secret_key: str  # Required - must be set in .env (no default!)
+    secret_key: str = "dev_secret_key_change_in_production"  # TODO: Set in .env
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
 
     # Rate Limiting
     rate_limit_requests: int = 100
@@ -21,7 +26,6 @@ class Settings(BaseSettings):
     # South Africa Specific
     default_currency: str = "ZAR"
     supported_languages: list[str] = ["en", "zu", "xh", "af", "st", "tn", "so"]
-    # en=English, zu=Zulu, xh=Xhosa, af=Afrikaans, st=Sotho, tn=Tswana, so=Sotho(Southern)
     vat_rate: float = 0.15  # 15% VAT
 
     # Free Trial
@@ -30,7 +34,7 @@ class Settings(BaseSettings):
     standard_platform_fee_percent: float = 15.0  # 15% after trial
 
     # Supabase Configuration
-    supabase_url: str = "https://tehxyuhsyqzroklplvcf.supabase.co"
+    supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
     
@@ -58,15 +62,12 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379"
     
-    # Environment
-    environment: str = "development"
-    debug: bool = True
-    
     # CORS (comma-separated origins for production)
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
     # Monitoring - GlitchTip (Sentry-compatible)
-    sentry_dsn: str = "https://25a5585d096a411495f93126742fbf73@app.glitchtip.com/20760"
+    sentry_dsn: str = ""
+    glitchtip_dsn: str = ""  # Alias for sentry_dsn
     posthog_api_key: str = ""
 
     class Config:

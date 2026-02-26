@@ -106,3 +106,7 @@ class TripLocationUpdate(BaseModel):
     """Driver location update during trip"""
     latitude: float
     longitude: float
+
+
+# Alias for backwards compatibility
+TripCreate = TripRequest

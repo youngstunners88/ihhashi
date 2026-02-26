@@ -38,3 +38,23 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Secrets and credentials - NEVER commit these!
+*.pem
+*.key
+secrets/
+credentials/
+firebase-*.json
+*-service-account.json
+
+# Docker
+.docker/
+
+# Test coverage
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# TypeScript
+tsconfig.tsbuildinfo
