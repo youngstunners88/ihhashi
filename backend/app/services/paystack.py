@@ -5,7 +5,7 @@ Handles payment initialization, verification, and webhooks
 import httpx
 from typing import Optional, Dict, Any
 from datetime import datetime
-from app.core.config import settings
+from app.config import settings
 
 
 class PaystackService:
@@ -14,7 +14,7 @@ class PaystackService:
     BASE_URL = "https://api.paystack.co"
     
     def __init__(self):
-        self.secret_key = settings.PAYSTACK_SECRET_KEY
+        self.secret_key = settings.paystack_secret_key
         self.headers = {
             "Authorization": f"Bearer {self.secret_key}",
             "Content-Type": "application/json"
@@ -70,6 +70,59 @@ class PaystackService:
             response = await client.get(
                 f"{self.BASE_URL}/transaction/verify/{reference}",
                 headers=self.headers
+            )
+            return response.json()
+    
+    async def refund_payment(
+        self,
+        reference: str,
+        amount: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """
+        Initiate a refund for a transaction
+        
+        Args:
+            reference: Transaction reference to refund
+            amount: Amount to refund (full refund if None)
+        
+        Returns:
+            Refund response
+        """
+        payload = {"transaction": reference}
+        if amount:
+            payload["amount"] = int(amount * 100)
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.BASE_URL}/refund",
+                headers=self.headers,
+                json=payload
+            )
+            return response.json()
+    
+    async def verify_account_number(
+        self,
+        account_number: str,
+        bank_code: str
+    ) -> Dict[str, Any]:
+        """
+        Verify bank account details
+        
+        Args:
+            account_number: Bank account number
+            bank_code: Bank code
+        
+        Returns:
+            Account verification response with account name
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.BASE_URL}/bank/resolve",
+                headers=self.headers,
+                params={
+                    "account_number": account_number,
+                    "bank_code": bank_code
+                }
             )
             return response.json()
     

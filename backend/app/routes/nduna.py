@@ -11,16 +11,31 @@ from datetime import datetime
 
 router = APIRouter(prefix="/nduna", tags=["nduna"])
 
-# Groq API configuration
-GROQ_API_KEYS = [
-    "REMOVED_SECRET_1",
-    "REMOVED_SECRET_2",
-    "REMOVED_SECRET_3",
-    "REMOVED_SECRET_4",
-    "REMOVED_SECRET_5",
-    "REMOVED_SECRET_6",
-    "REMOVED_SECRET_7",
-]
+# Groq API keys (rotation for load balancing) - loaded from environment
+def get_groq_api_keys():
+    """Load Groq API keys from environment"""
+    keys = []
+    for i in range(1, 20):
+        key = os.getenv(f"GROQ_API_KEY_{i}")
+        if key:
+            keys.append(key)
+    return keys if keys else ["fallback-key"]
+
+GROQ_API_KEYS = get_groq_api_keys()
+
+# Additional API keys - loaded from environment
+OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+
+def get_google_keys():
+    """Load Google API keys from environment"""
+    keys = []
+    for i in range(1, 10):
+        key = os.getenv(f"GOOGLE_API_KEY_{i}")
+        if key:
+            keys.append(key)
+    return keys
+
+GOOGLE_KEYS = get_google_keys()
 
 # Key rotation for rate limiting
 current_key_index = 0
