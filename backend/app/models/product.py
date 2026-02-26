@@ -4,83 +4,129 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
-class ProductCategory(str, Enum):
-    UTENSILS = "utensils"
-    STATIONERY = "stationery"
-    HOUSEHOLD = "household"
-    ELECTRONICS = "electronics"
-    GROCERIES = "groceries"
-    OTHER = "other"
-
-
 class ProductStatus(str, Enum):
-    ACTIVE = "active"
+    AVAILABLE = "available"
     OUT_OF_STOCK = "out_of_stock"
     DISCONTINUED = "discontinued"
+    HIDDEN = "hidden"
 
 
-class Product(BaseModel):
-    """Product available for purchase"""
+class ProductImage(BaseModel):
+    """Product image with display order"""
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
-    store_id: str  # Reference to store
+    url: str
+    alt_text: Optional[str] = None
+    is_primary: bool = False
+    display_order: int = 0
+
+
+class ProductPricing(BaseModel):
+    """Product pricing with SA-specific fields"""
+    price: float  # In ZAR
+    original_price: Optional[float] = None  # For discounts
+    vat_inclusive: bool = True  # SA VAT at 15%
+    vat_amount: Optional[float] = None  # Calculated VAT
+
+
+class ProductRating(BaseModel):
+    """Product rating summary"""
+    average_rating: float = 0.0
+    total_reviews: int = 0
+    rating_distribution: dict = {  # How many reviews per star
+        "5": 0, "4": 0, "3": 0, "2": 0, "1": 0
+    }
+
+
+class ProductTemplate(BaseModel):
+    """Standard product template for vendors"""
+    id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
+    merchant_id: str
     
     # Basic info
     name: str
-    description: Optional[str] = None
-    category: ProductCategory
+    description: str
+    category: str
+    
+    # Images (up to 5)
+    images: List[ProductImage] = []
     
     # Pricing
-    price: float
-    currency: str = "ZAR"
+    pricing: ProductPricing
     
     # Inventory
-    stock_quantity: int = 0
-    status: ProductStatus = ProductStatus.ACTIVE
+    status: ProductStatus = ProductStatus.AVAILABLE
+    quantity_available: int = 0
+    low_stock_threshold: int = 5
     
-    # Images
-    image_url: Optional[str] = None
-    thumbnail_url: Optional[str] = None
+    # Ratings and reviews
+    rating: ProductRating = ProductRating()
     
-    # Discovery
-    tags: List[str] = []  # For search
-    is_featured: bool = False
-    is_popular: bool = False
+    # Tags for search
+    tags: List[str] = []
     
-    # Metrics
-    times_ordered: int = 0
-    avg_rating: Optional[float] = None
-    review_count: int = 0
+    # Preparation time
+    preparation_time_minutes: int = 15
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Review(BaseModel):
+    """Customer review for product/vendor/delivery"""
+    id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
+    
+    # Review target (one of these must be set)
+    product_id: Optional[str] = None
+    merchant_id: Optional[str] = None
+    delivery_serviceman_id: Optional[str] = None
+    
+    # Reviewer
+    customer_id: str
+    order_id: str
+    
+    # Content
+    rating: int  # 1-5
+    title: Optional[str] = None
+    comment: str
+    images: List[str] = []  # Image URLs
+    
+    # Merchant response
+    merchant_response: Optional[str] = None
+    merchant_responded_at: Optional[datetime] = None
     
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "Stainless Steel Spork",
-                "description": "Durable 3-in-1 utensil",
-                "category": "utensils",
-                "price": 45.00,
-                "stock_quantity": 50,
-                "tags": ["camping", "eco-friendly", "utensils"]
-            }
-        }
+    # Moderation
+    is_visible: bool = True
+    flagged: bool = False
 
 
-class ProductCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    category: ProductCategory
-    price: float
-    stock_quantity: int = 0
-    image_url: Optional[str] = None
-    tags: List[str] = []
-
-
-class ProductUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    price: Optional[float] = None
-    stock_quantity: Optional[int] = None
-    status: Optional[ProductStatus] = None
+class Comment(BaseModel):
+    """Comment on reviews or products"""
+    id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
+    
+    # Comment target
+    review_id: Optional[str] = None
+    product_id: Optional[str] = None
+    
+    # Author (any user type can comment)
+    author_id: str
+    author_type: str  # "customer", "merchant", "delivery_serviceman"
+    author_name: str
+    
+    # Content
+    content: str
+    
+    # Replies
+    parent_comment_id: Optional[str] = None
+    replies: List[str] = []  # IDs of reply comments
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Moderation
+    is_visible: bool = True

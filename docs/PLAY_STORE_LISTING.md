@@ -32,34 +32,85 @@ delivery, food, restaurant, takeout, eat, hungry, pizza, burger, south africa, s
 ## Age Rating
 - Everyone
 
-## Graphic Assets Needed
+## Build Outputs
 
-### App Icon
-- Already configured in Android (see `android/app/src/main/res/`)
+### Debug APK (Testing)
+- **File:** `ihhashi-debug.apk`
+- **Size:** 3.6MB
+- **Location:** `/home/workspace/iHhashi/ihhashi-debug.apk`
+- **Use:** For testing on device
 
-### Screenshots Required (2-8)
-Need to capture screenshots from the app showing:
-1. Home screen with categories
-2. Restaurant/Merchant list
-3. Food item detail
-4. Cart/Checkout
-5. Order tracking
+### Release APK (For Play Store Submission)
+- **File:** `ihhashi-release-unsigned.apk`
+- **Size:** 2.9MB  
+- **Location:** `/home/workspace/iHhashi/ihhashi-release-unsigned.apk`
+- **Status:** ✅ Signed - see `ihhashi-release-signed.apk` below
+
+### Signed Release APK (Ready for Play Store)
+- **File:** `ihhashi-release-signed.apk`
+- **Size:** 2.9MB
+- **Location:** `/home/workspace/iHhashi/ihhashi-release-signed.apk`
+- **Status:** ✅ Ready for Play Store submission
+- **Certificate:** SHA-256: f5ac4cb791a29d1c717dc5ecf21aaf42b239dcba61ceeb994a557331f042d1e6
+
+### To sign the release APK:
+```bash
+# Option 1: Create a new keystore (one-time)
+keytool -genkey -v -keystore ihhashi.keystore -alias ihhashi -keyalg RSA -keysize 2048 -validity 10000
+
+# Option 2: Sign the APK
+apksigner sign --ks ihhashi.keystore --out ihhashi-release-signed.apk ihhashi-release-unsigned.apk
+```
+
+## Graphic Assets
+
+### App Icon ✅
+- Configured in Android (`android/app/src/main/res/mipmap-*/`)
+
+### Screenshots ✅ (4 images, 2160x3840 each - Play Store ready)
+1. `home-screenshot.png` - Home screen with categories
+2. `cart-screenshot.png` - Cart/Checkout
+3. `orders-screenshot.png` - Order tracking
+4. `profile-screenshot.png` - User profile
+- Location: `/home/workspace/iHhashi/docs/screenshots/`
 
 ### Feature Graphic (Optional)
-- 1024 x 500px hero image for Play Store
+- 1024 x 500px hero image - Not yet created
 
 ## URLs Required
 
-### Privacy Policy URL
-**STATUS:** ✅ Available
+### Privacy Policy URL ✅
 - URL: https://kofi.zo.space/privacy-policy
 
-### Support URL  
-**STATUS:** ✅ Available
+### Support URL ✅  
 - Email: teacherchris37@gmail.com
-- URL: https://kofi.zo.space (can add contact section)
 
-## Testing Notes
-- Debug APK built: `app-debug.apk` (3.6MB)
-- Package name: `com.ihhashi.delivery`
-- Test on Android 7.0+ (API 24+)
+## Play Store Submission Checklist
+
+| Item | Status |
+|------|--------|
+| App name with keywords | ✅ |
+| Short description | ✅ |
+| Full description | ✅ |
+| Keywords | ✅ |
+| Screenshots (4) | ✅ |
+| App icon | ✅ |
+| Privacy policy URL | ✅ |
+| Support URL | ✅ |
+| Category (Food & Drink) | ✅ |
+| Age rating (Everyone) | ✅ |
+| Release APK (unsigned) | ✅ |
+| Signed release APK | ✅ Complete |
+| App preview video | ❌ Optional |
+
+## Next Steps for Submission
+
+1. **Create Google Play Console account** (if not already) - https://play.google.com/console
+2. **Create app listing** in Play Console using:
+   - App name: iHhashi - Food Delivery SA
+   - Category: Food & Drink
+   - Age rating: Everyone
+   - Use the 4 screenshots from `/home/workspace/iHhashi/docs/screenshots/`
+3. **Upload signed APK** (`ihhashi-release-signed.apk`)
+4. **Complete store listing details**
+5. **Submit for review**

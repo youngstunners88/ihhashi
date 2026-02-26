@@ -16,3 +16,8 @@ async def close_db():
 
 def get_collection(name: str):
     return database[name]
+
+
+async def get_database():
+    """Dependency to get database instance"""
+    return database

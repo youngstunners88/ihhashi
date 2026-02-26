@@ -13,3 +13,6 @@ redis==5.0.1
 celery==5.3.6
 httpx==0.26.0
 supabase==2.3.0
+slowapi==0.1.9
+sentry-sdk[fastapi]==1.40.0
+posthog==3.5.0

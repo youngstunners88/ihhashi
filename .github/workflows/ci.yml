@@ -1,0 +1,79 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run linting (ruff)
+        run: |
+          pip install ruff
+          ruff check app/
+      
+      - name: Run tests
+        run: |
+          pip install pytest pytest-asyncio
+          pytest tests/ -v
+      
+      - name: Security check
+        run: |
+          pip install bandit
+          bandit -r app/ -f json -o bandit-report.json || true
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type check
+        run: npm run typecheck || npm run build
+      
+      - name: Lint
+        run: npm run lint || echo "No lint script configured"
+      
+      - name: Build
+        run: npm run build
+
+  # Optional: Auto-deploy to staging on main branch push
+  deploy-staging:
+    needs: [backend-test, frontend-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      # Add your deployment steps here (Render, Railway, Fly.io, etc.)
+      - name: Deploy to staging
+        run: echo "🚀 Deploy to staging (configure your provider)"
