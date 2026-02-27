@@ -97,11 +97,11 @@ app.add_middleware(
 # Setup Redis-backed rate limiting
 setup_rate_limiting(app)
 
-# Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(buyers.router, prefix="/api/buyers", tags=["buyers"])
-app.include_router(products.router, prefix="/api/products", tags=["products"])
-app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
+# Include routers - app.api exports APIRouter objects directly
+app.include_router(auth, prefix="/api/auth", tags=["auth"])
+app.include_router(buyers, prefix="/api/buyers", tags=["buyers"])
+app.include_router(products, prefix="/api/products", tags=["products"])
+app.include_router(orders, prefix="/api/orders", tags=["orders"])
 app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
 app.include_router(payments.router, prefix="/api", tags=["payments"])
 app.include_router(vendors_router, prefix="/api/vendors", tags=["vendors"])

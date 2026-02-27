@@ -1,7 +1,8 @@
 """
 Rider API routes - Full implementation with MongoDB
+SECURITY: Rate limiting on all endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from typing import Optional
 from datetime import datetime, timedelta
 from bson import ObjectId
@@ -12,12 +13,17 @@ from app.models import (
     DriverLocationUpdate, User, UserRole
 )
 from app.database import get_collection
+from app.middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/riders", tags=["riders"])
 
 
 @router.get("/profile")
-async def get_rider_profile(current_user: User = Depends(get_current_user)):
+@limiter.limit("60/minute")
+async def get_rider_profile(
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
     """Get rider profile"""
     if current_user.role != UserRole.DRIVER:
         raise HTTPException(status_code=403, detail="Not a driver")
@@ -33,7 +39,9 @@ async def get_rider_profile(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/profile")
+@limiter.limit("10/minute")
 async def create_rider_profile(
+    request: Request,
     driver_data: DriverCreate,
     current_user: User = Depends(get_current_user)
 ):
@@ -73,7 +81,9 @@ async def create_rider_profile(
 
 
 @router.put("/profile")
+@limiter.limit("20/minute")
 async def update_rider_profile(
+    request: Request,
     full_name: Optional[str] = None,
     bank_name: Optional[str] = None,
     account_number: Optional[str] = None,
@@ -103,7 +113,9 @@ async def update_rider_profile(
 
 
 @router.put("/status")
+@limiter.limit("30/minute")
 async def update_rider_status(
+    request: Request,
     status_update: DriverStatusUpdate,
     current_user: User = Depends(get_current_user)
 ):
@@ -142,7 +154,9 @@ async def update_rider_status(
 
 
 @router.put("/location")
+@limiter.limit("120/minute")  # High frequency - rider updates location often
 async def update_rider_location(
+    request: Request,
     location: DriverLocationUpdate,
     current_user: User = Depends(get_current_user)
 ):
@@ -177,7 +191,9 @@ async def update_rider_location(
 
 
 @router.get("/orders/available")
+@limiter.limit("30/minute")
 async def get_available_orders(
+    request: Request,
     lat: Optional[float] = Query(None),
     lng: Optional[float] = Query(None),
     radius_km: float = Query(5.0),
@@ -255,7 +271,9 @@ async def get_available_orders(
 
 
 @router.post("/orders/{order_id}/accept")
+@limiter.limit("20/minute")
 async def accept_order(
+    request: Request,
     order_id: str,
     current_user: User = Depends(get_current_user)
 ):
@@ -350,7 +368,11 @@ async def accept_order(
 
 
 @router.get("/earnings")
-async def get_earnings(current_user: User = Depends(get_current_user)):
+@limiter.limit("30/minute")
+async def get_earnings(
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
     """Calculate rider earnings"""
     if current_user.role != UserRole.DRIVER:
         raise HTTPException(status_code=403, detail="Not a driver")
@@ -419,7 +441,9 @@ async def get_earnings(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/history")
+@limiter.limit("30/minute")
 async def get_trip_history(
+    request: Request,
     limit: int = Query(20, le=100),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user)

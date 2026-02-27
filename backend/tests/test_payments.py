@@ -356,7 +356,7 @@ class TestWebhookHandling:
         
         assert payment["status"] == "success"
     
-    @pytest.asyncio
+    @pytest.mark.asyncio
     async def test_webhook_updates_order_payment(
         self,
         async_client: AsyncClient,

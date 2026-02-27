@@ -46,3 +46,9 @@ def webhook_rate_limit(limit: str = "100/minute"):
     def decorator(func):
         return limiter.limit(limit)(func)
     return decorator
+
+def order_rate_limit(limit: str = "20/minute"):
+    """Rate limiting decorator for order endpoints (moderate)"""
+    def decorator(func):
+        return limiter.limit(limit)(func)
+    return decorator

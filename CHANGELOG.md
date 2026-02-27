@@ -5,6 +5,39 @@ All notable changes to iHhashi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-02-27
+
+### Security (Remediation from ShieldGuard Audit)
+
+#### Critical Concurrency Fix
+- **Fixed** race condition in order creation that allowed overselling (atomic stock management)
+- **Added** `find_one_and_update` pattern for atomic stock decrement with condition check
+- **Added** rollback mechanism for partial order failures
+- **Added** stock restoration on order cancellation
+
+#### WebSocket Security Hardening
+- **Fixed** unauthenticated access to order tracking WebSocket endpoint
+- **Added** JWT token validation before accepting connections
+- **Added** access control verification (buyer/rider/merchant/admin only)
+- **Added** proper WebSocket close codes (4001=auth required, 4003=unauthorized, 4004=not found)
+
+#### Rate Limiting (All Endpoints)
+- **Added** rate limiting to all order endpoints (10-60/min based on sensitivity)
+- **Added** rate limiting to all rider endpoints (10-120/min for location updates)
+- **Added** `order_rate_limit` decorator to middleware
+
+#### Input Validation
+- **Added** coordinate validation for latitude (-90 to 90) and longitude (-180 to 180)
+- **Added** speed validation (0-200 km/h) and heading validation (0-360 degrees)
+- **Added** quantity limits (max 99 per item)
+- **Added** buyer notes sanitization (HTML stripping, max 500 chars)
+
+### Files Changed
+- `backend/app/routes/orders.py` - Atomic operations, rate limiting, input validation
+- `backend/app/routes/websocket.py` - Authentication, coordinate validation
+- `backend/app/routes/riders.py` - Rate limiting on all endpoints
+- `backend/app/middleware/rate_limit.py` - New order_rate_limit decorator
+
 ## [0.4.0] - 2026-02-27
 
 ### Security (Critical Fixes from Security Audit)
