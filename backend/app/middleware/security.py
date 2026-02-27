@@ -33,46 +33,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-class RequestValidationMiddleware(BaseHTTPMiddleware):
-    """Validate incoming requests for common attacks"""
-    
-    # SQL injection patterns
-    SQL_PATTERNS = [
-        "union select", "or 1=1", "'; drop", "--", "/*", 
-        "exec(", "execute(", "xp_", "sp_", "0x"
-    ]
-    
-    # XSS patterns  
-    XSS_PATTERNS = [
-        "<script", "javascript:", "onerror=", "onload=",
-        "eval(", "document.cookie", "alert("
-    ]
-    
-    async def dispatch(self, request: Request, call_next):
-        # Check query parameters
-        query_str = str(request.query_params).lower()
-        body = ""
-        
-        # Only read body for certain methods
-        if request.method in ["POST", "PUT", "PATCH"]:
-            try:
-                body = (await request.body()).decode().lower()
-            except:
-                body = ""
-        
-        combined = query_str + body
-        
-        # Check for SQL injection
-        for pattern in self.SQL_PATTERNS:
-            if pattern in combined:
-                raise HTTPException(status_code=400, detail="Invalid request")
-        
-        # Check for XSS
-        for pattern in self.XSS_PATTERNS:
-            if pattern in combined:
-                raise HTTPException(status_code=400, detail="Invalid request")
-        
-        return await call_next(request)
+# NOTE: RequestValidationMiddleware has been removed.
+# FastAPI/Pydantic + Motor (MongoDB ORM) already provide robust protection against
+# SQL injection and XSS through:
+# - Pydantic validation and sanitization of all input
+# - Motor's parameterized queries (MongoDB operations are injection-safe by design)
+# - FastAPI's automatic request validation
+# Adding naive pattern matching causes false positives and doesn't improve security.
 
 
 class TimingMiddleware(BaseHTTPMiddleware):

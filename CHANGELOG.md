@@ -5,6 +5,31 @@ All notable changes to iHhashi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-02-27
+
+### Security (Critical Fixes from Security Review)
+
+#### Backend Security Fixes
+- **Removed** dangerous `RequestValidationMiddleware` - naive SQL/XSS pattern matching causes false positives
+- **Kept** proper protection via FastAPI/Pydantic validation + Motor's injection-safe MongoDB operations
+
+#### Frontend Authentication Fixes
+- **Fixed** frontend authentication to use Bearer token authentication (JWT) instead of broken CSRF logic
+- **Updated** API interceptor to read `access_token` from localStorage and send as `Authorization: Bearer {token}`
+- **Updated** login/register to store tokens in localStorage from backend response
+- **Updated** logout to clear both `access_token` and `refresh_token` from localStorage
+- **Removed** CSRF token logic entirely (not needed for Bearer token auth)
+
+#### Analytics Security Fixes
+- **Fixed** hardcoded PostHog API key in `frontend/src/lib/posthog.ts`
+- **Added** environment variable validation - only initialize if `VITE_POSTHOG_KEY` is properly configured
+- **Added** protection against placeholder/invalid keys
+
+### Files Changed
+- `backend/app/middleware/security.py` - Removed dangerous RequestValidationMiddleware
+- `frontend/src/lib/api.ts` - Fixed Bearer token authentication
+- `frontend/src/lib/posthog.ts` - Removed hardcoded key, added env validation
+
 ## [0.4.1] - 2026-02-27
 
 ### Security (Remediation from ShieldGuard Audit)

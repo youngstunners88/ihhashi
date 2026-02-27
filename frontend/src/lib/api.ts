@@ -1,8 +1,4 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { getCSRFToken, clearCSRFToken, CSRF_HEADER_NAME, initCSRF } from './csrf';
-
-// Methods that require CSRF protection (state-changing operations)
-const CSRF_PROTECTED_METHODS = ['post', 'put', 'patch', 'delete'];
 
 /**
  * Get the API base URL from environment variable
@@ -24,35 +20,28 @@ const api: AxiosInstance = axios.create({
     'Accept-Language': localStorage.getItem('language') || 'en',
   },
   timeout: 15000, // 15s timeout for spotty SA networks
-  withCredentials: true, // Essential for cookie-based auth
 });
 
 /**
  * Request interceptor
- * - Adds CSRF token for state-changing requests
+ * - Attaches Bearer token from localStorage
  * - Handles data-saver mode
- * - No localStorage token management (cookies only)
+ * - Sets language preference
  */
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    // Add CSRF token for state-changing methods
-    if (config.method && CSRF_PROTECTED_METHODS.includes(config.method.toLowerCase())) {
-      try {
-        const csrfToken = await getCSRFToken();
-        if (csrfToken) {
-          config.headers[CSRF_HEADER_NAME] = csrfToken;
-        }
-      } catch (error) {
-        console.warn('Failed to get CSRF token, proceeding without it');
-      }
+    // 1. Attach the Bearer Token from localStorage
+    const token = localStorage.getItem('access_token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Data-light mode: request compressed responses
+    // 2. Data-light mode: request compressed responses
     if (localStorage.getItem('data_saver') === 'true') {
       config.headers['Accept-Encoding'] = 'gzip, deflate';
     }
 
-    // Language preference
+    // 3. Language preference
     const language = localStorage.getItem('language');
     if (language) {
       config.headers['Accept-Language'] = language;
@@ -65,7 +54,7 @@ api.interceptors.request.use(
 
 /**
  * Response interceptor
- * - Handles authentication errors (clear CSRF, redirect to login)
+ * - Handles authentication errors (clear token, redirect to login)
  * - Handles offline mode gracefully
  * - Provides user-friendly error messages
  */
@@ -74,8 +63,9 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     // Handle 401 - unauthorized/session expired
     if (error.response?.status === 401) {
-      // Clear CSRF token on auth failure
-      clearCSRFToken();
+      // Clear tokens on auth failure
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       
       // Only redirect if not already on auth pages
       const currentPath = window.location.pathname;
@@ -84,17 +74,6 @@ api.interceptors.response.use(
         window.location.href = `/login?session_expired=1&return=${returnUrl}`;
       }
       return Promise.reject(error);
-    }
-
-    // Handle 403 - CSRF validation failed
-    if (error.response?.status === 403) {
-      const errorData = error.response?.data as any;
-      if (errorData?.detail?.toLowerCase().includes('csrf')) {
-        // Clear invalid CSRF token and retry once
-        clearCSRFToken();
-        // The user can retry their action
-        return Promise.reject(new Error('Security token expired. Please try again.'));
-      }
     }
 
     // Handle offline mode for South African connectivity issues
@@ -163,7 +142,8 @@ export const authAPI = {
       await api.post('/auth/logout');
     } finally {
       // Always clear local state
-      clearCSRFToken();
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
     }
   },
 
@@ -330,23 +310,5 @@ export const riderAPI = {
   updateOrderStatus: (orderId: string, status: string) =>
     api.patch(`/riders/orders/${orderId}/status`, { status }),
 };
-
-// ============================================================================
-// Initialize CSRF on module load
-// This ensures CSRF token is ready before any API calls
-// ============================================================================
-let csrfInitialized = false;
-
-export const initializeApi = async (): Promise<void> => {
-  if (!csrfInitialized) {
-    await initCSRF();
-    csrfInitialized = true;
-  }
-};
-
-// Auto-initialize when this module is imported (non-blocking)
-initializeApi().catch(() => {
-  // Silently fail - will retry on first API call
-});
 
 export default api;

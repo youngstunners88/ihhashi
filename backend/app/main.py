@@ -1,17 +1,18 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from contextlib import asynccontextmanager
 import sentry_sdk
 import logging
 
-from app.api import auth, products, orders, buyers
-from app.routes import trips, payments
-from app.routes.vendors import router as vendors_router
-from app.routes.delivery_servicemen import router as servicemen_router
+# Real routes only - no mocks
+from app.routes.auth import router as auth_router
 from app.routes.orders import router as orders_router
 from app.routes.merchants import router as merchants_router
 from app.routes.riders import router as riders_router
+from app.routes.vendors import router as vendors_router
+from app.routes.delivery_servicemen import router as servicemen_router
+from app.routes import trips, payments
 from app.routes.websocket import router as websocket_router
 from app.routes.nduna import router as nduna_router
 from app.config import settings
@@ -21,7 +22,7 @@ from app.database import (
     ensure_indexes,
     health_check as db_health_check,
 )
-from app.database import database  # Import the global database reference
+from app.database import database
 from app.core.redis_client import init_redis, close_redis
 from app.middleware.rate_limit import setup_rate_limiting
 
@@ -97,20 +98,25 @@ app.add_middleware(
 # Setup Redis-backed rate limiting
 setup_rate_limiting(app)
 
-# Include routers - app.api exports APIRouter objects directly
-app.include_router(auth, prefix="/api/auth", tags=["auth"])
-app.include_router(buyers, prefix="/api/buyers", tags=["buyers"])
-app.include_router(products, prefix="/api/products", tags=["products"])
-app.include_router(orders, prefix="/api/orders", tags=["orders"])
-app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
-app.include_router(payments.router, prefix="/api", tags=["payments"])
-app.include_router(vendors_router, prefix="/api/vendors", tags=["vendors"])
-app.include_router(servicemen_router, prefix="/api/delivery-servicemen", tags=["delivery-servicemen"])
+# ============================================================================
+# Create /api/v1 router - matches frontend expectations
+# ============================================================================
+api_v1 = APIRouter(prefix="/api/v1")
 
-# New routes - full implementation
-app.include_router(orders_router, prefix="/api/v2/orders", tags=["orders-v2"])
-app.include_router(merchants_router, prefix="/api/v2/merchants", tags=["merchants"])
-app.include_router(riders_router, prefix="/api/v2/riders", tags=["riders"])
+# Mount all real routes under /api/v1
+api_v1.include_router(auth_router, prefix="/auth", tags=["auth"])
+api_v1.include_router(orders_router, prefix="/orders", tags=["orders"])
+api_v1.include_router(merchants_router, prefix="/merchants", tags=["merchants"])
+api_v1.include_router(riders_router, prefix="/riders", tags=["riders"])
+api_v1.include_router(vendors_router, prefix="/vendors", tags=["vendors"])
+api_v1.include_router(servicemen_router, prefix="/delivery-servicemen", tags=["delivery-servicemen"])
+api_v1.include_router(trips.router, prefix="/trips", tags=["trips"])
+api_v1.include_router(payments.router, prefix="/payments", tags=["payments"])
+
+# Include the v1 router in main app
+app.include_router(api_v1)
+
+# WebSocket and chatbot at different prefixes
 app.include_router(websocket_router, prefix="/ws", tags=["websocket"])
 app.include_router(nduna_router, prefix="/api/nduna", tags=["nduna-chatbot"])
 
