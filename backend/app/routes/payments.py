@@ -11,6 +11,7 @@ import hmac
 import json
 from pymongo.errors import DuplicateKeyError
 import logging
+from datetime import timezone
 
 from app.services.auth import get_current_user
 from app.services.paystack import PaystackService, SA_BANK_CODES
@@ -107,7 +108,19 @@ async def initialize_payment(
     # Generate unique reference
     reference = f"ihhashi-{uuid.uuid4().hex[:12]}"
     
-    callback_url = payment.callback_url or settings.payment_callback_url
+    # Whitelist allowed callback domains to prevent open redirect attacks
+    ALLOWED_CALLBACK_DOMAINS = [
+        "ihhashi.app", "www.ihhashi.app", "localhost", "127.0.0.1"
+    ]
+    requested_cb = payment.callback_url
+    if requested_cb:
+        from urllib.parse import urlparse
+        parsed = urlparse(requested_cb)
+        if parsed.hostname not in ALLOWED_CALLBACK_DOMAINS:
+            raise HTTPException(status_code=400, detail="Invalid callback URL domain")
+        callback_url = requested_cb
+    else:
+        callback_url = settings.payment_callback_url
     
     # Store payment attempt
     payments_col = get_collection("payments")
@@ -118,7 +131,7 @@ async def initialize_payment(
         "amount": payment.amount,
         "order_id": payment.order_id,
         "status": "initialized",
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now(timezone.utc)
     }
     await payments_col.insert_one(payment_doc)
     
@@ -213,7 +226,7 @@ async def verify_payment(
                         {"$set": {
                             "payment_status": "paid",
                             "payment_reference": reference,
-                            "paid_at": datetime.utcnow()
+                            "paid_at": datetime.now(timezone.utc)
                         }}
                     )
             
@@ -268,7 +281,7 @@ async def create_payout(
         "bank_code": payout.bank_code,
         "account_name": payout.account_name,
         "status": "initialized",
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now(timezone.utc)
     }
     await payments_col.insert_one(payout_doc)
     
@@ -372,7 +385,7 @@ async def create_refund(
                     "refund_status": "processing",
                     "refund_amount": refund.amount or payment["amount"],
                     "refund_reason": refund.reason,
-                    "refunded_at": datetime.utcnow()
+                    "refunded_at": datetime.now(timezone.utc)
                 }}
             )
             
@@ -481,7 +494,7 @@ async def paystack_webhook(request: Request):
             "event_id": event_id,
             "event": event,
             "data": data,
-            "received_at": datetime.utcnow(),
+            "received_at": datetime.now(timezone.utc),
             "processed": False
         })
     except DuplicateKeyError:
@@ -524,7 +537,7 @@ async def paystack_webhook(request: Request):
                 {"_id": ObjectId(payment["order_id"])},
                 {"$set": {
                     "payment_status": "paid",
-                    "paid_at": datetime.utcnow()
+                    "paid_at": datetime.now(timezone.utc)
                 }}
             )
             
@@ -538,7 +551,7 @@ async def paystack_webhook(request: Request):
             {"transfer_code": transfer_code},
             {"$set": {
                 "status": "success",
-                "completed_at": datetime.utcnow()
+                "completed_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -551,7 +564,7 @@ async def paystack_webhook(request: Request):
             {"transfer_code": transfer_code},
             {"$set": {
                 "status": "failed",
-                "failed_at": datetime.utcnow(),
+                "failed_at": datetime.now(timezone.utc),
                 "failure_reason": data.get("reason")
             }}
         )
@@ -565,7 +578,7 @@ async def paystack_webhook(request: Request):
             {"reference": reference},
             {"$set": {
                 "refund_status": "completed",
-                "refunded_at": datetime.utcnow()
+                "refunded_at": datetime.now(timezone.utc)
             }}
         )
         

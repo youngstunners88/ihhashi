@@ -258,7 +258,7 @@ export const tripsAPI = {
 // Payments API
 // ============================================================================
 export const paymentsAPI = {
-  initialize: (data: { amount: number; order_id: string }) =>
+  initialize: (data: { amount: number; order_id: string; email?: string }) =>
     api.post('/payments/initialize', data),
   verify: (reference: string) => api.get(`/payments/verify/${reference}`),
   banks: () => api.get('/payments/banks'),

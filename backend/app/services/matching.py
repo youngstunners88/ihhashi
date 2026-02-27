@@ -2,13 +2,15 @@
 Rider matching and delivery fare calculation service - Production ready with transaction locking
 """
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict
 from math import radians, sin, cos, sqrt, atan2
 from bson import ObjectId
+from zoneinfo import ZoneInfo
 
 from app.database import get_collection
 from app.utils.validation import safe_object_id
+from app.services.delivery_fee import calculate_delivery_fee, is_surge_time, SAST
 
 
 class MatchingService:
@@ -26,7 +28,7 @@ class MatchingService:
         }
         self.per_km_rate = 6.0
         self.per_minute_rate = 1.0
-        self.surge_hours = [7, 8, 17, 18, 19]  # Morning and evening rush
+        self.surge_hours = [7, 8, 17, 18, 19]  # Morning and evening rush in SAST
     
     def calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         """Calculate distance between two points in km using Haversine formula"""
@@ -47,34 +49,12 @@ class MatchingService:
         delivery: Dict,
         vehicle_type: str = "bike"
     ) -> Dict:
-        """Calculate delivery fee estimate"""
-        
-        distance_km = self.calculate_distance(
+        """Calculate delivery fee estimate using single source of truth."""
+        return calculate_delivery_fee(
             pickup["latitude"], pickup["longitude"],
-            delivery["latitude"], delivery["longitude"]
+            delivery["latitude"], delivery["longitude"],
+            vehicle_type
         )
-        
-        # Base fee
-        base_fee = self.base_fees.get(vehicle_type, 15.0)
-        
-        # Distance cost
-        distance_cost = distance_km * self.per_km_rate
-        
-        # Surge pricing (rush hours)
-        current_hour = datetime.utcnow().hour
-        surge_multiplier = 1.3 if current_hour in self.surge_hours else 1.0
-        
-        # Total
-        total = (base_fee + distance_cost) * surge_multiplier
-        
-        return {
-            "base_fee": round(base_fee, 2),
-            "distance_km": round(distance_km, 2),
-            "distance_cost": round(distance_cost, 2),
-            "surge_multiplier": surge_multiplier,
-            "total_estimate": round(total, 2),
-            "currency": "ZAR"
-        }
     
     async def find_nearest_rider(
         self,
@@ -146,7 +126,7 @@ class MatchingService:
                 "$set": {
                     "status": "busy",
                     "locked_for_delivery": delivery_id,
-                    "locked_at": datetime.utcnow()
+                    "locked_at": datetime.now(timezone.utc)
                 }
             },
             return_document=True
@@ -236,7 +216,7 @@ class MatchingService:
                             "$set": {
                                 "rider_id": str(rider["_id"]),
                                 "status": "rider_assigned",
-                                "rider_assigned_at": datetime.utcnow()
+                                "rider_assigned_at": datetime.now(timezone.utc)
                             }
                         }
                     )
@@ -282,13 +262,12 @@ class MatchingService:
     
     async def _notify_rider(self, rider_id: str, delivery_id: str):
         """Send push notification to rider"""
-        # TODO: Implement Firebase Cloud Messaging
         notification = {
             "rider_id": rider_id,
             "delivery_id": delivery_id,
             "type": "delivery_request",
             "message": "New delivery request nearby!",
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc)
         }
         await self.db.notifications.insert_one(notification)
     
@@ -298,7 +277,7 @@ class MatchingService:
             "customer_id": customer_id,
             "type": "delivery_update",
             "message": message,
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc)
         }
         await self.db.notifications.insert_one(notification)
     
@@ -309,7 +288,7 @@ class MatchingService:
             "delivery_id": delivery_id,
             "type": "delivery_update",
             "message": message,
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc)
         }
         await self.db.notifications.insert_one(notification)
     

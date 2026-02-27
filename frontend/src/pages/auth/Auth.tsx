@@ -1,34 +1,86 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { useNavigate, Navigate } from 'react-router-dom'
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { useAuth } from '../../App'
+import { authAPI } from '../../lib/api'
 
-interface AuthProps {
-  onAuth: () => void
-}
-
-export default function Auth({ onAuth }: AuthProps) {
+export default function Auth() {
   const navigate = useNavigate()
-  const [step, setStep] = useState<'phone' | 'otp'>('phone')
-  const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
+  const { isAuthenticated, login } = useAuth()
+  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
-  const handleSendOTP = async () => {
-    setLoading(true)
-    // TODO: Call API to send OTP
-    setTimeout(() => {
-      setStep('otp')
-      setLoading(false)
-    }, 1000)
+  const [form, setForm] = useState({
+    email: '',
+    phone: '',
+    full_name: '',
+    password: '',
+  })
+
+  // Already logged in → redirect home
+  if (isAuthenticated) return <Navigate to="/" replace />
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    setError('')
   }
 
-  const handleVerifyOTP = async () => {
+  const handleLogin = async () => {
+    if (!form.email || !form.password) {
+      setError('Please fill in all fields')
+      return
+    }
     setLoading(true)
-    // TODO: Call API to verify OTP
-    setTimeout(() => {
-      onAuth()
+    setError('')
+    try {
+      const response = await authAPI.login({ email: form.email, password: form.password })
+      const { user, access_token, refresh_token } = response.data
+      // Store tokens in memory via the API lib (not localStorage for security)
+      // The api.ts interceptor handles cookie-based auth, but we also store token in memory
+      localStorage.setItem('access_token', access_token)
+      if (refresh_token) localStorage.setItem('refresh_token', refresh_token)
+      login(user)
       navigate('/')
-    }, 1000)
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRegister = async () => {
+    if (!form.email || !form.phone || !form.password || !form.full_name) {
+      setError('Please fill in all fields')
+      return
+    }
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      await authAPI.register({
+        email: form.email,
+        phone: form.phone,
+        name: form.full_name,
+        password: form.password,
+        role: 'customer',
+      })
+      // Auto-login after registration
+      const loginResp = await authAPI.login({ email: form.email, password: form.password })
+      const { user, access_token, refresh_token } = loginResp.data
+      localStorage.setItem('access_token', access_token)
+      if (refresh_token) localStorage.setItem('refresh_token', refresh_token)
+      login(user)
+      navigate('/')
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -38,80 +90,116 @@ export default function Auth({ onAuth }: AuthProps) {
         <button onClick={() => navigate(-1)} className="p-2 -ml-2">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-semibold ml-2">Sign In</h1>
+        <h1 className="text-lg font-semibold ml-2">{mode === 'login' ? 'Sign In' : 'Create Account'}</h1>
       </div>
 
-      {/* Content */}
       <div className="max-w-md mx-auto px-6 py-8">
-        <h2 className="text-2xl font-bold mb-2">
-          {step === 'phone' ? 'Enter your number' : 'Verify your number'}
+        <h2 className="text-2xl font-bold mb-1">
+          {mode === 'login' ? 'Welcome back' : 'Join iHhashi'}
         </h2>
-        <p className="text-gray-600 mb-8">
-          {step === 'phone' 
-            ? "We'll send you a verification code" 
-            : `We sent a code to +27${phone}`}
+        <p className="text-gray-500 mb-8 text-sm">
+          {mode === 'login' ? 'Sign in to your account' : 'Fast delivery across Mzansi'}
         </p>
 
-        {step === 'phone' ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-medium text-gray-700">+27</span>
+        <div className="space-y-4">
+          {mode === 'register' && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Full Name</label>
               <input
-                type="tel"
-                placeholder="821234567"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                className="input flex-1"
-                maxLength={10}
+                name="full_name"
+                type="text"
+                placeholder="Thandi Nkosi"
+                value={form.full_name}
+                onChange={handleChange}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#FF6B35] focus:ring-2 focus:ring-[#FF6B35]/20"
               />
             </div>
-            <button 
-              onClick={handleSendOTP}
-              disabled={phone.length < 9 || loading}
-              className="btn-primary w-full disabled:opacity-50"
-            >
-              {loading ? 'Sending...' : 'Continue'}
-            </button>
+          )}
+
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">Email</label>
+            <input
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#FF6B35] focus:ring-2 focus:ring-[#FF6B35]/20"
+            />
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex gap-2 justify-center">
-              {[0, 1, 2, 3, 4, 5].map((i) => (
+
+          {mode === 'register' && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Phone Number</label>
+              <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-[#FF6B35] focus-within:ring-2 focus-within:ring-[#FF6B35]/20">
+                <span className="px-3 py-3 bg-gray-50 text-gray-600 font-medium border-r border-gray-200">+27</span>
                 <input
-                  key={i}
-                  type="text"
-                  maxLength={1}
-                  value={otp[i] || ''}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '')
-                    const newOtp = otp.split('')
-                    newOtp[i] = val
-                    setOtp(newOtp.join(''))
-                    // Auto-focus next input
-                    if (val && i < 5) {
-                      const next = e.target.nextElementSibling as HTMLInputElement
-                      next?.focus()
-                    }
-                  }}
-                  className="w-12 h-12 text-center text-xl font-bold border border-gray-200 rounded-xl focus:border-[#FF6B35] focus:ring-2 focus:ring-[#FF6B35]/20 outline-none"
+                  name="phone"
+                  type="tel"
+                  placeholder="821234567"
+                  value={form.phone.replace(/^\+27|^0/, '')}
+                  onChange={(e) => setForm(p => ({ ...p, phone: `+27${e.target.value.replace(/\D/g, '')}` }))}
+                  className="flex-1 px-3 py-3 outline-none"
+                  maxLength={10}
                 />
-              ))}
+              </div>
             </div>
-            <button 
-              onClick={handleVerifyOTP}
-              disabled={otp.length < 6 || loading}
-              className="btn-primary w-full disabled:opacity-50"
-            >
-              {loading ? 'Verifying...' : 'Verify'}
-            </button>
-            <button 
-              onClick={() => setStep('phone')}
-              className="text-[#FF6B35] text-sm font-medium w-full py-2"
-            >
-              Change number
-            </button>
+          )}
+
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">Password</label>
+            <div className="relative">
+              <input
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder={mode === 'register' ? 'Min 8 chars, 1 uppercase, 1 number' : 'Your password'}
+                value={form.password}
+                onChange={handleChange}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-12 outline-none focus:border-[#FF6B35] focus:ring-2 focus:ring-[#FF6B35]/20"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
-        )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={mode === 'login' ? handleLogin : handleRegister}
+            disabled={loading}
+            className="w-full bg-[#FF6B35] text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+            {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+          </button>
+
+          <div className="text-center pt-2">
+            {mode === 'login' ? (
+              <p className="text-sm text-gray-500">
+                Don't have an account?{' '}
+                <button onClick={() => { setMode('register'); setError('') }} className="text-[#FF6B35] font-medium">
+                  Sign up
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Already have an account?{' '}
+                <button onClick={() => { setMode('login'); setError('') }} className="text-[#FF6B35] font-medium">
+                  Sign in
+                </button>
+              </p>
+            )}
+          </div>
+        </div>
 
         <p className="text-xs text-gray-400 text-center mt-8">
           By continuing, you agree to our Terms of Service and Privacy Policy

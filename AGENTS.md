@@ -190,3 +190,27 @@ Delivery platform for South Africa, inspired by Ele.me.
 ### Language Support (i18n)
 - **Package**: react-i18next
 - **Languages**: English, Zulu, Sotho, Afrikaans, Tswana, Xhosa
+
+---
+
+## 🤖 AGENT SYNCHRONIZATION
+
+### Keeping Agents Updated
+When iHhashi is updated, run the sync skill to update all agent knowledge bases:
+```bash
+bun /home/workspace/Skills/ihhashi-sync/scripts/sync.ts
+```
+
+This automatically updates:
+1. **Nduna Bot** - Telegram bot knowledge base (`/home/workspace/mosta-agent/knowledge-base.json`)
+2. **Marketing OpenClaw** - Marketing prompts (`/home/workspace/mosta-agent/prompts/marketing-prompts.md`)
+
+### When to Sync
+- New features added/removed
+- Business logic changes (pricing, payments, verification)
+- New user types or roles
+- Marketing messaging updates
+- Any significant app update
+
+### Rule
+Zo has a rule to automatically run this sync whenever iHhashi is updated.

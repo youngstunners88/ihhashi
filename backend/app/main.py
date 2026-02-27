@@ -23,6 +23,7 @@ from app.database import (
 )
 from app.database import database  # Import the global database reference
 from app.core.redis_client import init_redis, close_redis
+from app.middleware.rate_limit import setup_rate_limiting
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Setup Redis-backed rate limiting
+setup_rate_limiting(app)
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])

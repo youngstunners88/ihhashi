@@ -51,7 +51,7 @@ delivery, food, restaurant, takeout, eat, hungry, pizza, burger, south africa, s
 - **Size:** 2.9MB
 - **Location:** `/home/workspace/iHhashi/ihhashi-release-signed.apk`
 - **Status:** ✅ Ready for Play Store submission
-- **Certificate:** SHA-256: f5ac4cb791a29d1c717dc5ecf21aaf42b239dcba61ceeb994a557331f042d1e6
+- **Certificate:** SHA-256: c0ca0fed6c3da128616834e0a160aecc615b5f805e3dee495bb927c54388a383
 
 ### To sign the release APK:
 ```bash

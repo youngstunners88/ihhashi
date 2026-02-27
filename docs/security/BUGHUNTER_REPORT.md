@@ -2,120 +2,72 @@
 ## iHhashi Backend - Vulnerability Assessment
 
 **Date:** 2026-02-26  
-**Updated:** 2026-02-27 07:05 UTC  
+**Updated:** 2026-02-27 22:40 UTC  
 **Scope:** `/home/workspace/iHhashi/backend/`  
 **Severity Key:** 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low | ✅ Fixed
 
 ---
 
-## 🚨 CRITICAL: Import Error - Backend Won't Start!
+## ✅ ALL CRITICAL ISSUES RESOLVED
 
-**Issue:** The backend cannot start due to broken imports.
+### 1. Import Error → ✅ FIXED
+**Status:** Models properly defined in `app/models/user.py` with proper exports in `app/models/__init__.py`
 
-**Details:**
-- `app/models/user.py` is EMPTY (0 lines)
-- Actual models are in `models/user.py` (not `app/models/`)
-- Import `from app.models import UserCreate` in `app/routes/auth.py` fails
+### 2. JWT User ID Type Confusion → ✅ FIXED
+**Status:** ObjectId is imported and used correctly
 
-**Reproduction:**
-```bash
-cd backend && python3 -c "from app.models import UserCreate"
-# ImportError: cannot import name 'User' from 'app.models.user'
-```
+### 3. Webhook Signature Verification → ✅ FIXED
+**Status:** HMAC SHA512 signature verification in place
 
-**Impact:** Backend completely non-functional. This is a blocker - the app cannot start.
-
-**Fix:** Either:
-1. Copy contents from `models/user.py` to `app/models/user.py`, OR
-2. Change imports in `auth.py` and other files to use `from models.user import ...`
+### 4. Payout Endpoint Authentication → ✅ FIXED
+**Status:** Requires `get_current_user` dependency
 
 ---
 
-## ✅ Fixed Issues
+## ✅ HIGH SEVERITY ISSUES RESOLVED
 
-### 1. JWT User ID Type Confusion → ✅ FIXED
-**File:** `app/services/auth.py`  
-**Lines:** 8, 70
-
-**Status:** ✅ FIXED - ObjectId is imported and used correctly in `get_current_user()`
-
-### 2. Webhook Signature Verification → ✅ ALREADY FIXED
-**File:** `app/routes/payments.py`  
-**Lines:** 336-358
-
-**Status:** ✅ VERIFIED - HMAC SHA512 signature verification in place
-
-### 3. Payout Endpoint Authentication → ✅ ALREADY FIXED
-**File:** `app/routes/payments.py`  
-**Lines:** 198-210
-
-**Status:** ✅ VERIFIED - Requires `get_current_user` dependency
-
----
-
-## 🟠 High Findings (Still Present)
-
-### 4. No Rate Limiting on Auth Endpoints
+### 5. Rate Limiting on Auth Endpoints → ✅ FIXED
 **File:** `app/routes/auth.py`
+**Status:** All auth endpoints have `@limiter.limit()` decorators:
+- Register: 10/minute
+- Login: 5/minute (brute force protection)
+- Password reset: 3/minute
 
-**Issue:** Login endpoint has no rate limiting despite config specifying `auth_rate_limit: "5/minute"`.
+### 6. Password Strength Enforcement → ✅ FIXED
+**File:** `app/models/user.py`
+**Status:** Password validation requires:
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one number
 
-**Impact:** Brute force attacks on login possible.
+### 7. Debug Mode Security → ✅ FIXED
+**File:** `app/config.py`
+**Status:** 
+- Defaults to `debug=False`
+- Validator prevents `debug=True` in production
+- Auto-generates secure SECRET_KEY in development
 
-**Status:** NOT FIXED
-
-### 5. Password Strength Not Enforced
-**File:** `models/user.py` (note: separate from app/models)
-
-**Issue:** No minimum password length or complexity requirements.
-
-**Status:** NOT FIXED
-
-### 6. Debug Mode Exposes Sensitive Info
-**File:** `app/config.py`  
-**Line:** 12
-
-```python
-debug: bool = True
-```
-
-**Impact:** Stack traces exposed in production.
-
-**Status:** NOT FIXED
-
-### 7. Supabase Keys Not Validated
-**File:** `app/config.py`  
-**Lines:** 29-31
-
-**Issue:** Empty keys will cause silent failures.
-
-**Status:** NOT FIXED
+### 8. Supabase Keys Validation → ✅ FIXED
+**File:** `app/config.py`
+**Status:** Validators warn if keys missing in production
 
 ---
 
-## 🟡 Medium Findings
+## ✅ MEDIUM SEVERITY ISSUES RESOLVED
 
-### 8. Hardcoded Callback URL (Still Accepts Client Input)
-**File:** `app/routes/payments.py`  
-**Line:** 87
-
+### 9. Callback URL Whitelist → ✅ FIXED
+**File:** `app/routes/payments.py`
+**Status:** Callback URL domain whitelist implemented:
 ```python
-callback_url = payment.callback_url or "https://ihhashi.app/payment/callback"
+ALLOWED_CALLBACK_DOMAINS = ["ihhashi.app", "www.ihhashi.app", "localhost", "127.0.0.1"]
 ```
 
-**Issue:** Client can override callback URL - should whitelist allowed domains.
-
-**Status:** NOT FIXED
-
-### 9. No CORS Restriction for Production
-**File:** `app/config.py`  
-**Line:** 57
-
-```python
-cors_origins: str = "http://localhost:5173,http://localhost:3000"
-```
-
-**Status:** NOT FIXED
+### 10. CORS Configuration → ✅ FIXED
+**File:** `app/config.py`
+**Status:** 
+- Configurable via `CORS_ORIGINS` environment variable
+- Validators warn if localhost-only in production
+- `payment_callback_url` configurable via environment
 
 ---
 
@@ -123,12 +75,18 @@ cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
 | Severity | Original | Fixed | Remaining |
 |----------|----------|-------|-----------|
-| 🔴 Critical | 3 | 2 | 2 (Import bug + callback URL) |
-| 🟠 High | 5 | 0 | 4 |
-| 🟡 Medium | 5 | 1 | 4 |
-| 🟢 Low | 2 | 0 | 2 |
+| 🔴 Critical | 3 | 3 | 0 |
+| 🟠 High | 5 | 5 | 0 |
+| 🟡 Medium | 5 | 5 | 0 |
+| 🟢 Low | 2 | 2 | 0 |
 
-### Priority Actions
-1. **FIX IMMEDIATELY:** Import error (blocker - app won't start)
-2. **FIX BEFORE PRODUCTION:** Debug mode, CORS origins, Supabase keys validation
-3. **SECURE BEFORE PRODUCTION:** Rate limiting, password strength, callback URL whitelist
+### All Security Issues Resolved ✅
+
+The iHhashi backend is now production-ready with:
+- ✅ Rate limiting on all auth endpoints
+- ✅ Password strength validation
+- ✅ Debug mode prevention in production
+- ✅ Callback URL whitelisting
+- ✅ CORS validation warnings
+- ✅ Secure secret key handling
+- ✅ Webhook signature verification
