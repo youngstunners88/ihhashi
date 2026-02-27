@@ -1,4 +1,4 @@
-# Testing CodeRabbit for iHhashi delivery platform # iHhashi
+# iHhashi
 
 Delivery platform for South Africa - Riders, Merchants, Customers.
 
