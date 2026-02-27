@@ -44,6 +44,18 @@ async def create_indexes(db: AsyncIOMotorDatabase):
     except Exception as e:
         logger.error(f"Failed to create drivers indexes: {e}")
     
+    # Riders collection indexes (for delivery riders)
+    try:
+        await db.riders.create_index("status")
+        await db.riders.create_index([("status", 1), ("vehicle_type", 1)])
+        # Geo index for location-based queries
+        await db.riders.create_index([("location", "2dsphere")])
+        # TTL index for stale locks (auto-release after 10 minutes)
+        await db.riders.create_index("locked_at", expireAfterSeconds=600)
+        indexes_created.append("riders")
+    except Exception as e:
+        logger.error(f"Failed to create riders indexes: {e}")
+    
     # Payments collection indexes
     try:
         await db.payments.create_index("reference", unique=True)
@@ -53,6 +65,15 @@ async def create_indexes(db: AsyncIOMotorDatabase):
         indexes_created.append("payments")
     except Exception as e:
         logger.error(f"Failed to create payments indexes: {e}")
+    
+    # Payment Webhooks collection indexes (idempotency)
+    try:
+        # Unique index on event_id prevents duplicate webhook processing
+        await db.payment_webhooks.create_index("event_id", unique=True)
+        await db.payment_webhooks.create_index([("received_at", -1)])
+        indexes_created.append("payment_webhooks")
+    except Exception as e:
+        logger.error(f"Failed to create payment_webhooks indexes: {e}")
     
     # Products collection indexes
     try:

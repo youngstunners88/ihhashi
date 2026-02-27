@@ -1,13 +1,15 @@
 """
-WebSocket routes for real-time order tracking
+WebSocket routes for real-time order tracking with JWT authentication
 """
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
-from typing import Dict, List
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
+from typing import Dict, List, Optional
 from datetime import datetime
 import json
 import asyncio
+import jwt
 
 from app.database import get_collection
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -23,12 +25,12 @@ class ConnectionManager:
         # user_id -> connection (for user notifications)
         self.user_connections: Dict[str, WebSocket] = {}
     
-    async def connect_order_tracker(self, websocket: WebSocket, order_id: str):
+    async def connect_order_tracker(self, websocket: WebSocket, order_id: str, user_id: str):
         """Connect a client to track an order"""
         await websocket.accept()
         if order_id not in self.order_connections:
             self.order_connections[order_id] = []
-        self.order_connections[order_id].append(websocket)
+        self.order_connections[order_id].append((websocket, user_id))
     
     async def connect_rider(self, websocket: WebSocket, rider_id: str):
         """Connect a rider for location updates"""
@@ -43,8 +45,9 @@ class ConnectionManager:
     def disconnect(self, websocket: WebSocket, order_id: str = None, rider_id: str = None, user_id: str = None):
         """Remove a connection"""
         if order_id and order_id in self.order_connections:
-            if websocket in self.order_connections[order_id]:
-                self.order_connections[order_id].remove(websocket)
+            self.order_connections[order_id] = [
+                (ws, uid) for ws, uid in self.order_connections[order_id] if ws != websocket
+            ]
         if rider_id and rider_id in self.rider_connections:
             if self.rider_connections[rider_id] == websocket:
                 del self.rider_connections[rider_id]
@@ -83,21 +86,53 @@ class ConnectionManager:
                 del self.user_connections[user_id]
 
 
+async def verify_websocket_token(token: str) -> Optional[dict]:
+    """
+    Verify JWT token for WebSocket authentication.
+    Returns user payload if valid, None otherwise.
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm]
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+
 # Global connection manager
 manager = ConnectionManager()
 
 
 @router.websocket("/track/{order_id}")
-async def track_order_websocket(websocket: WebSocket, order_id: str):
+async def track_order_websocket(
+    websocket: WebSocket, 
+    order_id: str,
+    token: Optional[str] = Query(None)
+):
     """
-    WebSocket endpoint for real-time order tracking
+    WebSocket endpoint for real-time order tracking with JWT auth
     
     Clients connect to receive:
     - Order status updates
     - Rider location updates
     - Delivery estimates
+    
+    Authentication: Pass JWT token as query parameter ?token=xxx
     """
-    await manager.connect_order_tracker(websocket, order_id)
+    # AUTH: Verify JWT token
+    user_id = None
+    if token:
+        payload = await verify_websocket_token(token)
+        if payload:
+            user_id = payload.get("sub")
+    
+    # Accept connection (with or without auth - some updates are public)
+    await manager.connect_order_tracker(websocket, order_id, user_id or "anonymous")
     
     try:
         # Send initial order status
@@ -161,15 +196,37 @@ async def track_order_websocket(websocket: WebSocket, order_id: str):
 
 
 @router.websocket("/rider/{rider_id}")
-async def rider_websocket(websocket: WebSocket, rider_id: str):
+async def rider_websocket(
+    websocket: WebSocket, 
+    rider_id: str,
+    token: Optional[str] = Query(None)
+):
     """
-    WebSocket endpoint for riders to send location updates
+    WebSocket endpoint for riders to send location updates with JWT auth
     
     Riders connect to:
     - Send their location updates
     - Receive new order notifications
     - Receive order status changes
+    
+    Authentication: Pass JWT token as query parameter ?token=xxx
     """
+    # AUTH: Verify JWT token - riders MUST be authenticated
+    if not token:
+        await websocket.close(code=4001, reason="Authentication required")
+        return
+    
+    payload = await verify_websocket_token(token)
+    if not payload:
+        await websocket.close(code=4001, reason="Invalid or expired token")
+        return
+    
+    # Verify the token belongs to this rider
+    token_user_id = payload.get("sub")
+    if token_user_id != rider_id:
+        await websocket.close(code=4003, reason="Unauthorized for this rider")
+        return
+    
     await manager.connect_rider(websocket, rider_id)
     
     riders_col = get_collection("riders")
@@ -251,15 +308,37 @@ async def rider_websocket(websocket: WebSocket, rider_id: str):
 
 
 @router.websocket("/user/{user_id}")
-async def user_websocket(websocket: WebSocket, user_id: str):
+async def user_websocket(
+    websocket: WebSocket, 
+    user_id: str,
+    token: Optional[str] = Query(None)
+):
     """
-    WebSocket endpoint for user notifications
+    WebSocket endpoint for user notifications with JWT auth
     
     Users connect to receive:
     - Order status updates
     - Delivery notifications
     - Chat messages from rider/merchant
+    
+    Authentication: Pass JWT token as query parameter ?token=xxx
     """
+    # AUTH: Verify JWT token - users MUST be authenticated
+    if not token:
+        await websocket.close(code=4001, reason="Authentication required")
+        return
+    
+    payload = await verify_websocket_token(token)
+    if not payload:
+        await websocket.close(code=4001, reason="Invalid or expired token")
+        return
+    
+    # Verify the token belongs to this user
+    token_user_id = payload.get("sub")
+    if token_user_id != user_id:
+        await websocket.close(code=4003, reason="Unauthorized for this user")
+        return
+    
     await manager.connect_user(websocket, user_id)
     
     try:

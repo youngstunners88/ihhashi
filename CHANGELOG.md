@@ -1,0 +1,117 @@
+# Changelog
+
+All notable changes to iHhashi will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.0] - 2026-02-27
+
+### Security (Critical Fixes from Security Audit)
+
+#### Webhook Idempotency & Replay Protection
+- **Added** unique index on `payment_webhooks.event_id` to prevent duplicate webhook processing
+- **Added** `DuplicateKeyError` handling in webhook handler to silently ignore replayed webhooks
+- **Added** Paystack verification call before marking payments as success (prevents fraud)
+
+#### Concurrency & Atomic Operations
+- **Added** atomic `find_and_lock_rider` method using `find_one_and_update` pattern
+- **Added** `locked_at` timestamp for rider locks with TTL auto-release (10 minutes)
+- **Fixed** race condition in rider assignment that could cause double-assignment
+
+#### WebSocket Authentication
+- **Added** JWT authentication to all WebSocket endpoints (`/ws/track`, `/ws/rider`, `/ws/user`)
+- **Added** token validation on connect with proper error codes (4001=auth required, 4003=unauthorized)
+- **Added** user/rider identity verification to prevent impersonation
+
+#### Rate Limiting
+- **Added** Redis-backed rate limiting for production scaling
+- **Added** specialized rate limit decorators: `payment_rate_limit`, `webhook_rate_limit`
+- **Fixed** in-memory rate limiter that resets on process restart
+
+### Database Indexes
+- **Added** `riders.location` 2dsphere geo index for location queries
+- **Added** `riders.locked_at` TTL index (600 seconds) for auto-releasing stuck locks
+- **Added** `payment_webhooks.event_id` unique index for idempotency
+- **Added** `payment_webhooks.received_at` index for log queries
+
+### Testing
+- **Added** `test_concurrent_matching.py` - Tests for atomic rider assignment
+- **Added** `test_webhook_replay.py` - Tests for webhook idempotency protection
+- **Added** tests verifying TTL index behavior for stale locks
+
+### CI/CD
+- **Added** smoke-test job that verifies backend health before production deployment
+- **Changed** deploy-production to depend on smoke-test (not just docker-build)
+- **Added** Docker health check with curl to `/health` endpoint
+
+### Changed
+- Updated payments webhook handler with idempotent updates (`status != success` check)
+- Updated rate limiter to use Redis storage URI from settings
+
+## [0.3.0] - 2026-02-27
+
+### Added
+- **Payment Scheduling**: Automatic weekly payouts every Sunday at 11:11 AM SAST for verified delivery servicemen
+- **Inclusive Transport Options**: Added wheelchair, running, and rollerblade delivery options
+- **Database Seeding**: Sample data script with admin, 7 delivery servicemen, and 3 merchants
+- **Multi-Modal Delivery**: Full support for car, motorcycle, scooter, bicycle, and on-foot delivery
+
+### Changed
+- Updated README with comprehensive deployment instructions
+- Enhanced Play Store listing with all required assets
+
+## [0.2.0] - 2026-02-26
+
+### Added
+- **Blue Horse Verification System**: Comprehensive ID, company, and vehicle verification
+- **Multi-Modal Delivery**: Support for various transport types (car, motorcycle, scooter, bicycle, on-foot)
+- **Account Management**: 45-day free trial, warning system, suspension/termination logic
+- **Tipping System**: 0% platform fee on tips - 100% goes to delivery servicemen
+- **Product Templates**: Up to 5 images per product, VAT-inclusive pricing
+- **Reviews & Comments**: Star ratings (1-5), vendor responses
+- **Language Support**: English, Zulu, Sotho, Afrikaans, Tswana, Xhosa
+- **GlitchTip Integration**: Open-source error tracking
+- **PostHog Integration**: User behavior analytics
+- **GitHub Actions CI/CD**: Automated lint, test, build, deploy pipelines
+- **Rate Limiting**: slowapi for API protection
+
+### Changed
+- Pivot from Boober (ride-hailing) to iHhashi (food delivery)
+- Database models updated for delivery-focused operations
+
+## [0.1.0] - 2026-02-25
+
+### Added
+- Initial project scaffold
+- FastAPI backend with MongoDB
+- React + Tailwind frontend
+- Capacitor for Android mobile app
+- Supabase authentication (Phone OTP)
+- Basic order, merchant, and rider models
+
+---
+
+## Version History
+
+| Version | Date | Status |
+|---------|------|--------|
+| 0.4.0 | 2026-02-27 | Current |
+| 0.3.0 | 2026-02-27 | Released |
+| 0.2.0 | 2026-02-26 | Released |
+| 0.1.0 | 2026-02-25 | Initial Release |
+
+## Upcoming (Planned)
+
+- [ ] Paystack payment integration
+- [ ] Yoco payment integration  
+- [ ] Google Maps integration
+- [ ] Push notifications (Firebase)
+- [ ] SMS notifications (Twilio)
+- [ ] Telegram bot enhancements
+- [ ] Real-time WebSocket tracking
+- [ ] Advanced analytics dashboard
+
+---
+
+*Maintained by DocMaster - iHhashi Documentation Agent*

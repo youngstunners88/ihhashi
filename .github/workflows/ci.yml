@@ -28,7 +28,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-asyncio pytest-cov httpx
-      
       - name: Run linting
         run: |
           pip install ruff
@@ -102,7 +101,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-  # Build and Push Docker Image (on main only)
+  # Build Docker Image (on main only)
   docker-build:
     needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
@@ -134,6 +133,35 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/ihhashi-frontend:latest,${{ secrets.DOCKER_USERNAME }}/ihhashi-frontend:${{ github.sha }}
 
+  # Smoke Test - Verify deployment health before proceeding
+  smoke-test:
+    needs: [docker-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run backend smoke test
+        run: |
+          # Pull and run the backend image
+          docker pull ${{ secrets.DOCKER_USERNAME }}/ihhashi-backend:latest
+          docker run -d --name backend-test \
+            -p 8000:8000 \
+            -e SECRET_KEY=smoke_test_key \
+            -e ENVIRONMENT=test \
+            ${{ secrets.DOCKER_USERNAME }}/ihhashi-backend:latest
+          
+          # Wait for startup
+          sleep 10
+          
+          # Health check
+          curl -f http://localhost:8000/health || exit 1
+          
+          # Cleanup
+          docker stop backend-test
+          docker rm backend-test
+
   # Deploy to staging (on develop branch)
   deploy-staging:
     needs: [docker-build]
@@ -148,7 +176,7 @@ jobs:
 
   # Deploy to production (on main branch)
   deploy-production:
-    needs: [docker-build]
+    needs: [smoke-test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:

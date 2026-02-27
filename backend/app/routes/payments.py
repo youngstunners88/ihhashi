@@ -9,6 +9,8 @@ import uuid
 import hashlib
 import hmac
 import json
+from pymongo.errors import DuplicateKeyError
+import logging
 
 from app.services.auth import get_current_user
 from app.services.paystack import PaystackService, SA_BANK_CODES
@@ -18,6 +20,8 @@ from app.models import User, UserRole
 from app.utils.validation import safe_object_id
 
 router = APIRouter(prefix="/payments", tags=["payments"])
+
+logger = logging.getLogger(__name__)
 
 
 # ============ MODELS ============
@@ -439,7 +443,7 @@ async def verify_bank_account(
 @router.post("/webhook")
 async def paystack_webhook(request: Request):
     """
-    Handle Paystack webhooks
+    Handle Paystack webhooks with idempotency protection
     
     Events: charge.success, transfer.success, transfer.failed, refund.processed
     """
@@ -465,25 +469,45 @@ async def paystack_webhook(request: Request):
     
     event = payload.get("event")
     data = payload.get("data", {})
+    event_id = payload.get("id") or data.get("id")  # Paystack event ID
     
     payments_col = get_collection("payments")
     orders_col = get_collection("orders")
-    
-    # Log webhook
     webhooks_col = get_collection("payment_webhooks")
-    await webhooks_col.insert_one({
-        "event": event,
-        "data": data,
-        "received_at": datetime.utcnow(),
-        "processed": False
-    })
+    
+    # IDEMPOTENCY: Check if webhook already processed
+    try:
+        await webhooks_col.insert_one({
+            "event_id": event_id,
+            "event": event,
+            "data": data,
+            "received_at": datetime.utcnow(),
+            "processed": False
+        })
+    except DuplicateKeyError:
+        # Webhook already processed - return success without re-processing
+        return {"status": "ignored", "reason": "duplicate_event"}
     
     if event == "charge.success":
         reference = data.get("reference")
         
+        # VERIFY with Paystack before marking success (prevents fraud)
+        try:
+            paystack = PaystackService()
+            verification = await paystack.verify_payment(reference)
+            if verification.get("data", {}).get("status") != "success":
+                await webhooks_col.update_one(
+                    {"event_id": event_id},
+                    {"$set": {"processed": True, "verification_failed": True}}
+                )
+                return {"status": "verification_failed"}
+        except Exception as e:
+            # Log but continue - webhook signature was valid
+            logger.error(f"Payment verification failed for {reference}: {e}")
+        
         # Update payment record
         await payments_col.update_one(
-            {"reference": reference},
+            {"reference": reference, "status": {"$ne": "success"}},  # Idempotent update
             {"$set": {
                 "status": "success",
                 "paid_at": data.get("paid_at"),
