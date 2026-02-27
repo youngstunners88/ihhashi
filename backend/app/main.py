@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from contextlib import asynccontextmanager
 import sentry_sdk
+import logging
 
 from app.api import auth, products, orders, buyers
 from app.routes import trips, payments
@@ -14,7 +15,16 @@ from app.routes.riders import router as riders_router
 from app.routes.websocket import router as websocket_router
 from app.routes.nduna import router as nduna_router
 from app.config import settings
-from app.database import connect_db, close_db, database
+from app.database import (
+    connect_db, 
+    close_db, 
+    ensure_indexes,
+    health_check as db_health_check,
+)
+from app.database import database  # Import the global database reference
+from app.core.redis_client import init_redis, close_redis
+
+logger = logging.getLogger(__name__)
 
 # Initialize GlitchTip (Sentry-compatible)
 if settings.glitchtip_dsn:
@@ -27,15 +37,48 @@ if settings.glitchtip_dsn:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    logger.info("Starting iHhashi API...")
+    
+    # Initialize MongoDB connection
     await connect_db()
+    logger.info("MongoDB connected")
+    
+    # Create database indexes
+    try:
+        index_results = await ensure_indexes(database)
+        logger.info(f"Database indexes created: {len(index_results)} collections updated")
+    except Exception as e:
+        logger.warning(f"Failed to create indexes: {e}")
+    
+    # Initialize Redis connection
+    try:
+        await init_redis()
+        logger.info("Redis connected")
+    except Exception as e:
+        logger.warning(f"Redis connection failed (caching disabled): {e}")
+    
+    logger.info("iHhashi API startup complete")
+    
     yield
+    
     # Shutdown
+    logger.info("Shutting down iHhashi API...")
+    
+    # Close Redis connection
+    try:
+        await close_redis()
+        logger.info("Redis connection closed")
+    except Exception as e:
+        logger.warning(f"Error closing Redis: {e}")
+    
+    # Close MongoDB connection
     await close_db()
+    logger.info("MongoDB connection closed")
 
 app = FastAPI(
     title="iHhashi API",
     description="Buyer-centric delivery platform for South Africa",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan
 )
 
@@ -86,19 +129,31 @@ async def root():
 
 @app.get("/health")
 async def health():
-    """Health check with database connectivity test"""
-    db_status = "disconnected"
+    """Health check with database and Redis connectivity test"""
+    # Check MongoDB
+    db_status = await db_health_check()
+    
+    # Check Redis
+    redis_status = "disconnected"
     try:
-        if database is not None:
-            # Ping database
-            await database.client.admin.command("ping")
-            db_status = "connected"
+        from app.core.redis_client import get_redis
+        redis_client = get_redis()
+        await redis_client.ping()
+        redis_status = "connected"
     except Exception as e:
-        db_status = f"error: {str(e)[:50]}"
+        redis_status = f"unavailable"
+    
+    # Determine overall status
+    overall_status = "healthy"
+    if db_status.get("status") != "healthy":
+        overall_status = "degraded"
+    elif redis_status != "connected":
+        overall_status = "healthy"  # Redis is optional
     
     return {
-        "status": "healthy" if db_status == "connected" else "degraded",
+        "status": overall_status,
         "database": db_status,
+        "redis": redis_status,
         "environment": settings.environment,
         "timestamp": datetime.utcnow().isoformat()
     }

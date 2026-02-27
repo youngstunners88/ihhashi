@@ -148,3 +148,19 @@ class DeliveryCompleteRequest(BaseModel):
 
 # Alias for backwards compatibility
 DeliveryCreate = DeliveryRequest
+
+# Trip aliases for backwards compatibility
+# Re-define TripStatus directly since we can't extend DeliveryStatus
+class TripStatus(str, Enum):
+    PENDING = "pending"
+    RIDER_ASSIGNED = "rider_assigned"
+    AT_MERCHANT = "at_merchant"
+    PICKED_UP = "picked_up"
+    IN_TRANSIT = "in_transit"
+    ARRIVED = "arrived"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+
+Trip = Delivery
+TripCreate = DeliveryRequest

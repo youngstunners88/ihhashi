@@ -19,5 +19,5 @@ export const useDataSaver = () => {
     window.dispatchEvent(new CustomEvent('dataSaverChange', { detail: { enabled } }));
   }, [enabled]);
 
-  return { enabled, toggle: () => setEnabled(prev => !prev) };
+  return { enabled, toggle: () => setEnabled((prev: boolean) => !prev) };
 };

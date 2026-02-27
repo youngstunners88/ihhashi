@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 const LANGUAGES = [
   { code: 'en', name: 'English', native: 'English' },
@@ -24,8 +24,6 @@ export default function LanguageSelector({ compact = false }: LanguageSelectorPr
     // In a full i18n implementation, this would trigger a re-render with translations
     window.location.reload()
   }
-
-  const current = LANGUAGES.find(l => l.code === currentLang) || LANGUAGES[0]
 
   if (compact) {
     return (

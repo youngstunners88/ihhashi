@@ -8,6 +8,7 @@ from bson import ObjectId
 from app.config import settings
 from app.models import User, UserCreate, UserRole
 from app.database import get_collection
+from app.core.redis_client import TokenBlacklist
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -20,8 +21,14 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
-    to_encode.update({"exp": expire})
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=settings.access_token_expire_minutes))
+    to_encode.update({"exp": expire, "type": "access"})
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+def create_refresh_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days)
+    to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 async def create_user(user_data: UserCreate) -> User:
@@ -67,10 +74,20 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials"
     )
+    
+    # Check if token is blacklisted
+    if await TokenBlacklist.is_blacklisted(token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked"
+        )
+    
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         user_id: str = payload.get("sub")
-        if not user_id:
+        token_type: str = payload.get("type")
+        
+        if not user_id or token_type != "access":
             raise credentials_exception
     except JWTError:
         raise credentials_exception
@@ -82,3 +99,21 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     
     user_doc["id"] = str(user_doc["_id"])
     return User(**user_doc)
+
+async def logout_user(token: str) -> bool:
+    """Logout user by blacklisting their token"""
+    try:
+        # Get token expiration to set appropriate blacklist TTL
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        exp = payload.get("exp", 0)
+        
+        # Calculate remaining time in seconds
+        now = datetime.utcnow().timestamp()
+        ttl = max(int(exp - now), 0)
+        
+        if ttl > 0:
+            await TokenBlacklist.add(token, ttl)
+        
+        return True
+    except Exception:
+        return False

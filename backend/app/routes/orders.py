@@ -12,6 +12,7 @@ from app.models import (
     OrderItem, DeliveryInfo, User, UserRole
 )
 from app.database import get_collection
+from app.utils.validation import safe_object_id
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -110,8 +111,12 @@ async def create_order(
     if not delivery_address:
         raise HTTPException(status_code=400, detail="Delivery address not found")
     
-    # Get store info
-    store = await stores_col.find_one({"_id": ObjectId(order_data.store_id)})
+    # Get store info - using safe ObjectId
+    try:
+        store = await stores_col.find_one({"_id": safe_object_id(order_data.store_id)})
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="Store not found")
+    
     if not store:
         raise HTTPException(status_code=404, detail="Store not found")
     
@@ -120,10 +125,16 @@ async def create_order(
     subtotal = 0.0
     
     for item in order_data.items:
-        product = await products_col.find_one({
-            "_id": ObjectId(item["product_id"]),
-            "store_id": order_data.store_id
-        })
+        try:
+            product = await products_col.find_one({
+                "_id": safe_object_id(item["product_id"]),
+                "store_id": order_data.store_id
+            })
+        except HTTPException:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Product {item['product_id']} not found"
+            )
         
         if not product:
             raise HTTPException(
@@ -208,9 +219,10 @@ async def get_order(
     """Get order details"""
     orders_col = get_collection("orders")
     
+    order = None
     try:
-        order = await orders_col.find_one({"_id": ObjectId(order_id)})
-    except Exception:
+        order = await orders_col.find_one({"_id": safe_object_id(order_id)})
+    except HTTPException:
         order = await orders_col.find_one({"id": order_id})
     
     if not order:
@@ -231,9 +243,10 @@ async def track_order(order_id: str):
     orders_col = get_collection("orders")
     drivers_col = get_collection("drivers")
     
+    order = None
     try:
-        order = await orders_col.find_one({"_id": ObjectId(order_id)})
-    except Exception:
+        order = await orders_col.find_one({"_id": safe_object_id(order_id)})
+    except HTTPException:
         order = await orders_col.find_one({"id": order_id})
     
     if not order:
@@ -278,9 +291,10 @@ async def update_order_status(
     """Update order status (merchant/rider only)"""
     orders_col = get_collection("orders")
     
+    order = None
     try:
-        order = await orders_col.find_one({"_id": ObjectId(order_id)})
-    except Exception:
+        order = await orders_col.find_one({"_id": safe_object_id(order_id)})
+    except HTTPException:
         order = await orders_col.find_one({"id": order_id})
     
     if not order:
@@ -400,9 +414,10 @@ async def cancel_order(
     """Cancel an order (buyer only, before rider pickup)"""
     orders_col = get_collection("orders")
     
+    order = None
     try:
-        order = await orders_col.find_one({"_id": ObjectId(order_id)})
-    except Exception:
+        order = await orders_col.find_one({"_id": safe_object_id(order_id)})
+    except HTTPException:
         order = await orders_col.find_one({"id": order_id})
     
     if not order:

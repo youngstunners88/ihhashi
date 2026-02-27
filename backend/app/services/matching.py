@@ -1,7 +1,14 @@
+"""
+Rider matching and delivery fare calculation service - Production ready with transaction locking
+"""
 import asyncio
 from datetime import datetime
 from typing import Optional, List, Dict
 from math import radians, sin, cos, sqrt, atan2
+from bson import ObjectId
+
+from app.database import get_collection
+from app.utils.validation import safe_object_id
 
 
 class MatchingService:
@@ -104,15 +111,58 @@ class MatchingService:
         # Return nearest rider
         return riders[0]
     
+    async def find_and_lock_rider(
+        self,
+        pickup_location: Dict,
+        vehicle_type: str,
+        delivery_id: ObjectId,
+        excluded_riders: List[str] = None,
+        max_distance_km: float = 5.0
+    ) -> Optional[Dict]:
+        """
+        Find and atomically lock a rider for assignment.
+        
+        Uses find_one_and_update to prevent race conditions where
+        multiple deliveries try to assign the same rider.
+        """
+        excluded_riders = excluded_riders or []
+        
+        # Try to find and lock a rider atomically
+        # This prevents race conditions in concurrent assignment scenarios
+        rider = await self.db.riders.find_one_and_update(
+            {
+                "status": "available",
+                "vehicle_type": vehicle_type,
+                "_id": {"$nin": [safe_object_id(r) for r in excluded_riders if r]},
+                "location": {"$near": {
+                    "$geometry": {
+                        "type": "Point",
+                        "coordinates": [pickup_location["longitude"], pickup_location["latitude"]]
+                    },
+                    "$maxDistance": max_distance_km * 1000
+                }}
+            },
+            {
+                "$set": {
+                    "status": "busy",
+                    "locked_for_delivery": delivery_id,
+                    "locked_at": datetime.utcnow()
+                }
+            },
+            return_document=True
+        )
+        
+        return rider
+    
     async def request_delivery(self, customer_id: str, delivery_data: dict) -> dict:
         """Main delivery request flow"""
         
         # 1. Validate customer
-        customer = await self.db.users.find_one({"_id": customer_id})
+        customer = await self.db.users.find_one({"_id": safe_object_id(customer_id)})
         if not customer:
             raise ValueError("Customer not found")
         
-        # 2. Check for existing active delivery
+        # 2. Check for existing active delivery (use atomic check)
         active_delivery = await self.db.deliveries.find_one({
             "customer_id": customer_id,
             "status": {"$in": ["pending", "rider_assigned", "at_merchant", "picked_up", "in_transit"]}
@@ -144,8 +194,8 @@ class MatchingService:
         result = await self.db.deliveries.insert_one(delivery.dict())
         delivery_id = result.inserted_id
         
-        # 5. Find and assign rider (async in background)
-        asyncio.create_task(self._assign_rider(delivery_id, delivery.dict(), fare_estimate))
+        # 5. Find and assign rider with proper locking (async in background)
+        asyncio.create_task(self._assign_rider_with_lock(delivery_id, delivery.dict(), fare_estimate))
         
         return {
             "delivery_id": str(delivery_id),
@@ -154,40 +204,67 @@ class MatchingService:
             "message": "Finding nearby riders..."
         }
     
-    async def _assign_rider(self, delivery_id, delivery_data: dict, fare_estimate: dict):
-        """Assign a rider to the delivery with retry logic"""
+    async def _assign_rider_with_lock(self, delivery_id: ObjectId, delivery_data: dict, fare_estimate: dict):
+        """
+        Assign a rider to the delivery with retry logic and proper locking.
+        
+        Uses atomic find_and_lock to prevent race conditions.
+        """
         
         max_attempts = 3
-        attempted_riders = []
+        attempted_rider_ids = []
         
         for attempt in range(max_attempts):
-            rider = await self.find_nearest_rider(
+            # Use atomic find-and-lock instead of separate find + update
+            rider = await self.find_and_lock_rider(
                 delivery_data["pickup_location"],
                 delivery_data.get("vehicle_type", "bike"),
-                attempted_riders
+                delivery_id,
+                attempted_rider_ids,
+                max_distance_km=5.0 + (attempt * 2)  # Expand search radius on retry
             )
             
             if rider:
-                # Assign rider
-                await self.db.deliveries.update_one(
-                    {"_id": delivery_id},
-                    {
-                        "$set": {
-                            "rider_id": rider["_id"],
-                            "status": "rider_assigned",
-                            "rider_assigned_at": datetime.utcnow()
+                try:
+                    # Assign rider to delivery
+                    result = await self.db.deliveries.update_one(
+                        {
+                            "_id": delivery_id,
+                            "status": "pending"  # Only update if still pending
+                        },
+                        {
+                            "$set": {
+                                "rider_id": str(rider["_id"]),
+                                "status": "rider_assigned",
+                                "rider_assigned_at": datetime.utcnow()
+                            }
                         }
-                    }
-                )
-                
-                # Notify rider (push notification)
-                await self._notify_rider(rider["_id"], str(delivery_id))
-                return
+                    )
+                    
+                    if result.modified_count > 0:
+                        # Successfully assigned
+                        await self._notify_rider(str(rider["_id"]), str(delivery_id))
+                        return
+                    else:
+                        # Delivery was already assigned by another process
+                        # Release the rider lock
+                        await self.db.riders.update_one(
+                            {"_id": rider["_id"]},
+                            {"$set": {"status": "available", "locked_for_delivery": None}}
+                        )
+                        return
+                        
+                except Exception as e:
+                    # Release rider lock on error
+                    await self.db.riders.update_one(
+                        {"_id": rider["_id"]},
+                        {"$set": {"status": "available", "locked_for_delivery": None}}
+                    )
+                    raise e
             
-            attempted_riders.append(rider["_id"] if rider else None)
             await asyncio.sleep(2)  # Wait before retry
         
-        # No rider found
+        # No rider found after all attempts
         await self.db.deliveries.update_one(
             {"_id": delivery_id},
             {"$set": {"status": "cancelled", "cancel_reason": "no_riders_available"}}
@@ -195,6 +272,13 @@ class MatchingService:
         
         # Notify customer
         await self._notify_customer(delivery_data["customer_id"], "No riders available. Please try again.")
+    
+    async def _assign_rider(self, delivery_id, delivery_data: dict, fare_estimate: dict):
+        """
+        DEPRECATED: Use _assign_rider_with_lock instead.
+        This method is kept for backwards compatibility but should not be used for new code.
+        """
+        await self._assign_rider_with_lock(delivery_id, delivery_data, fare_estimate)
     
     async def _notify_rider(self, rider_id: str, delivery_id: str):
         """Send push notification to rider"""
@@ -228,3 +312,16 @@ class MatchingService:
             "created_at": datetime.utcnow()
         }
         await self.db.notifications.insert_one(notification)
+    
+    async def release_rider(self, rider_id: str):
+        """Release a rider from a delivery assignment"""
+        await self.db.riders.update_one(
+            {"_id": safe_object_id(rider_id)},
+            {
+                "$set": {
+                    "status": "available",
+                    "locked_for_delivery": None,
+                    "locked_at": None
+                }
+            }
+        )

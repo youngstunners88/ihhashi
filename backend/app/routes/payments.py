@@ -15,6 +15,7 @@ from app.services.paystack import PaystackService, SA_BANK_CODES
 from app.config import settings
 from app.database import get_collection
 from app.models import User, UserRole
+from app.utils.validation import safe_object_id
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -102,7 +103,7 @@ async def initialize_payment(
     # Generate unique reference
     reference = f"ihhashi-{uuid.uuid4().hex[:12]}"
     
-    callback_url = payment.callback_url or "https://ihhashi.app/payment/callback"
+    callback_url = payment.callback_url or settings.payment_callback_url
     
     # Store payment attempt
     payments_col = get_collection("payments")
