@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from typing import Optional
 from app.services.auth import get_current_user
 from app.services.matching import MatchingService
-from app.models.trip import Trip, TripRequest, TripStatus, TripLocationUpdate
+from app.models.trip import (
+    Delivery, DeliveryRequest, DeliveryStatus, DeliveryLocationUpdate, DeliveryCompleteRequest
+)
 from app.database import get_database
 from datetime import datetime
 
@@ -10,39 +12,43 @@ router = APIRouter()
 
 
 @router.post("/request")
-async def request_trip(
-    trip_request: TripRequest,
+async def request_delivery(
+    delivery_request: DeliveryRequest,
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Request a new trip (taxi/delivery)
+    Request a new delivery for an order
     """
-    if current_user.get("user_type") != "customer":
-        raise HTTPException(status_code=403, detail="Only customers can request trips")
+    if current_user.get("user_type") not in ["customer", "merchant"]:
+        raise HTTPException(status_code=403, detail="Only customers or merchants can request deliveries")
     
     matching_service = MatchingService(db)
     
     try:
-        trip_data = {
+        delivery_data = {
+            "order_id": delivery_request.order_id,
             "pickup_location": {
-                "latitude": trip_request.pickup_latitude,
-                "longitude": trip_request.pickup_longitude,
-                "address": trip_request.pickup_address
+                "latitude": delivery_request.pickup_latitude,
+                "longitude": delivery_request.pickup_longitude,
+                "address": delivery_request.pickup_address
             },
-            "dropoff_location": {
-                "latitude": trip_request.dropoff_latitude,
-                "longitude": trip_request.dropoff_longitude,
-                "address": trip_request.dropoff_address
+            "delivery_location": {
+                "latitude": delivery_request.delivery_latitude,
+                "longitude": delivery_request.delivery_longitude,
+                "address": delivery_request.delivery_address,
+                "landmark": delivery_request.delivery_landmark
             },
-            "vehicle_type": trip_request.vehicle_type,
-            "payment_method": trip_request.payment_method
+            "vehicle_type": delivery_request.vehicle_type,
+            "item_count": delivery_request.item_count,
+            "special_instructions": delivery_request.special_instructions,
+            "payment_method": delivery_request.payment_method
         }
         
-        result = await matching_service.request_trip(
+        result = await matching_service.request_delivery(
             str(current_user["_id"]),
-            trip_data
+            delivery_data
         )
         return result
     except ValueError as e:
@@ -50,208 +56,335 @@ async def request_trip(
 
 
 @router.get("/active")
-async def get_active_trip(
+async def get_active_delivery(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Get current active trip for user
+    Get current active delivery for user
     """
     user_id = str(current_user["_id"])
+    active_statuses = ["pending", "rider_assigned", "at_merchant", "picked_up", "in_transit", "arrived"]
     
     # Check as customer
-    trip = await db.trips.find_one({
+    delivery = await db.deliveries.find_one({
         "customer_id": user_id,
-        "status": {"$in": ["requested", "driver_assigned", "driver_arrived", "in_progress"]}
+        "status": {"$in": active_statuses}
     })
     
-    # Check as driver
-    if not trip:
-        trip = await db.trips.find_one({
-            "driver_id": user_id,
-            "status": {"$in": ["driver_assigned", "driver_arrived", "in_progress"]}
+    # Check as rider
+    if not delivery:
+        delivery = await db.deliveries.find_one({
+            "rider_id": user_id,
+            "status": {"$in": active_statuses}
         })
     
-    if not trip:
-        return {"status": "no_active_trip"}
+    # Check as merchant
+    if not delivery:
+        delivery = await db.deliveries.find_one({
+            "merchant_id": user_id,
+            "status": {"$in": active_statuses}
+        })
     
-    return Trip(**trip).dict()
+    if not delivery:
+        return {"status": "no_active_delivery"}
+    
+    return Delivery(**delivery).dict()
 
 
-@router.post("/{trip_id}/accept")
-async def accept_trip(
-    trip_id: str,
+@router.post("/{delivery_id}/accept")
+async def accept_delivery(
+    delivery_id: str,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Driver accepts trip request
+    Rider accepts delivery request
     """
-    if current_user.get("user_type") != "driver":
-        raise HTTPException(status_code=403, detail="Only drivers can accept trips")
+    if current_user.get("user_type") != "rider":
+        raise HTTPException(status_code=403, detail="Only riders can accept deliveries")
     
-    trip = await db.trips.find_one({"_id": trip_id})
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
     
-    if trip["status"] != "requested":
-        raise HTTPException(status_code=400, detail="Trip already assigned")
+    if delivery["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Delivery already assigned")
     
-    # Assign driver
-    await db.trips.update_one(
-        {"_id": trip_id},
+    # Assign rider
+    await db.deliveries.update_one(
+        {"_id": delivery_id},
         {
             "$set": {
-                "driver_id": str(current_user["_id"]),
-                "status": "driver_assigned",
-                "driver_assigned_at": datetime.utcnow()
+                "rider_id": str(current_user["_id"]),
+                "status": "rider_assigned",
+                "rider_assigned_at": datetime.utcnow()
             }
         }
     )
     
-    return {"message": "Trip accepted", "trip_id": trip_id}
+    # Notify customer and merchant
+    await db.notifications.insert_many([
+        {
+            "user_id": delivery["customer_id"],
+            "type": "rider_assigned",
+            "delivery_id": delivery_id,
+            "message": "A rider has been assigned to your order",
+            "created_at": datetime.utcnow()
+        },
+        {
+            "user_id": delivery["merchant_id"],
+            "type": "rider_assigned",
+            "delivery_id": delivery_id,
+            "message": "A rider is on their way to pick up the order",
+            "created_at": datetime.utcnow()
+        }
+    ])
+    
+    return {"message": "Delivery accepted", "delivery_id": delivery_id}
 
 
-@router.post("/{trip_id}/arrived")
-async def driver_arrived(
-    trip_id: str,
+@router.post("/{delivery_id}/at-merchant")
+async def arrived_at_merchant(
+    delivery_id: str,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Driver has arrived at pickup
+    Rider has arrived at merchant for pickup
     """
-    trip = await db.trips.find_one({"_id": trip_id})
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
     
-    if trip["driver_id"] != str(current_user["_id"]):
-        raise HTTPException(status_code=403, detail="Not your trip")
+    if delivery["rider_id"] != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="Not your delivery")
     
-    await db.trips.update_one(
-        {"_id": trip_id},
-        {"$set": {"status": "driver_arrived"}}
+    await db.deliveries.update_one(
+        {"_id": delivery_id},
+        {"$set": {"status": "at_merchant"}}
     )
     
-    return {"message": "Status updated", "status": "driver_arrived"}
+    # Notify merchant
+    await db.notifications.insert_one({
+        "user_id": delivery["merchant_id"],
+        "type": "rider_arrived",
+        "delivery_id": delivery_id,
+        "message": "Rider has arrived for pickup",
+        "created_at": datetime.utcnow()
+    })
+    
+    return {"message": "Status updated", "status": "at_merchant"}
 
 
-@router.post("/{trip_id}/start")
-async def start_trip(
-    trip_id: str,
+@router.post("/{delivery_id}/picked-up")
+async def order_picked_up(
+    delivery_id: str,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Start the trip (driver picks up customer)
+    Rider has picked up the order from merchant
     """
-    trip = await db.trips.find_one({"_id": trip_id})
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
     
-    if trip["driver_id"] != str(current_user["_id"]):
-        raise HTTPException(status_code=403, detail="Not your trip")
+    if delivery["rider_id"] != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="Not your delivery")
     
-    await db.trips.update_one(
-        {"_id": trip_id},
+    await db.deliveries.update_one(
+        {"_id": delivery_id},
         {
             "$set": {
-                "status": "in_progress",
+                "status": "picked_up",
                 "pickup_time": datetime.utcnow()
             }
         }
     )
     
-    return {"message": "Trip started", "status": "in_progress"}
+    # Notify customer
+    await db.notifications.insert_one({
+        "user_id": delivery["customer_id"],
+        "type": "order_picked_up",
+        "delivery_id": delivery_id,
+        "message": "Your order has been picked up and is on its way",
+        "created_at": datetime.utcnow()
+    })
+    
+    return {"message": "Order picked up", "status": "picked_up"}
 
 
-@router.post("/{trip_id}/complete")
-async def complete_trip(
-    trip_id: str,
+@router.post("/{delivery_id}/in-transit")
+async def start_delivery(
+    delivery_id: str,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Complete the trip
+    Rider is in transit to delivery location
     """
-    trip = await db.trips.find_one({"_id": trip_id})
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
     
-    if trip["driver_id"] != str(current_user["_id"]):
-        raise HTTPException(status_code=403, detail="Not your trip")
+    if delivery["rider_id"] != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="Not your delivery")
     
-    await db.trips.update_one(
-        {"_id": trip_id},
-        {
-            "$set": {
-                "status": "completed",
-                "dropoff_time": datetime.utcnow(),
-                "payment_status": "pending"  # Will be updated after payment
-            }
-        }
+    await db.deliveries.update_one(
+        {"_id": delivery_id},
+        {"$set": {"status": "in_transit"}}
     )
     
-    return {"message": "Trip completed", "status": "completed"}
+    return {"message": "Delivery in transit", "status": "in_transit"}
 
 
-@router.post("/{trip_id}/cancel")
-async def cancel_trip(
-    trip_id: str,
+@router.post("/{delivery_id}/arrived")
+async def arrived_at_delivery(
+    delivery_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Rider has arrived at delivery location
+    """
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+    
+    if delivery["rider_id"] != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="Not your delivery")
+    
+    await db.deliveries.update_one(
+        {"_id": delivery_id},
+        {"$set": {"status": "arrived"}}
+    )
+    
+    # Notify customer
+    await db.notifications.insert_one({
+        "user_id": delivery["customer_id"],
+        "type": "rider_arrived",
+        "delivery_id": delivery_id,
+        "message": "Your rider has arrived at your location",
+        "created_at": datetime.utcnow()
+    })
+    
+    return {"message": "Arrived at delivery location", "status": "arrived"}
+
+
+@router.post("/{delivery_id}/complete")
+async def complete_delivery(
+    delivery_id: str,
+    complete_request: DeliveryCompleteRequest,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Mark delivery as complete (hand items to customer)
+    """
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+    
+    if delivery["rider_id"] != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="Not your delivery")
+    
+    update_data = {
+        "status": "delivered",
+        "delivery_time": datetime.utcnow(),
+        "payment_status": "completed"
+    }
+    
+    if complete_request.recipient_name:
+        update_data["delivery_proof.recipient_name"] = complete_request.recipient_name
+    if complete_request.notes:
+        update_data["delivery_proof.notes"] = complete_request.notes
+    
+    await db.deliveries.update_one(
+        {"_id": delivery_id},
+        {"$set": update_data}
+    )
+    
+    # Notify customer and merchant
+    await db.notifications.insert_many([
+        {
+            "user_id": delivery["customer_id"],
+            "type": "delivery_completed",
+            "delivery_id": delivery_id,
+            "message": "Your order has been delivered",
+            "created_at": datetime.utcnow()
+        },
+        {
+            "user_id": delivery["merchant_id"],
+            "type": "delivery_completed",
+            "delivery_id": delivery_id,
+            "message": "Order has been delivered to customer",
+            "created_at": datetime.utcnow()
+        }
+    ])
+    
+    return {"message": "Delivery completed", "status": "delivered"}
+
+
+@router.post("/{delivery_id}/cancel")
+async def cancel_delivery(
+    delivery_id: str,
     reason: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Cancel a trip
+    Cancel a delivery
     """
-    trip = await db.trips.find_one({"_id": trip_id})
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
     
     user_id = str(current_user["_id"])
-    is_customer = trip["customer_id"] == user_id
-    is_driver = trip.get("driver_id") == user_id
+    is_customer = delivery["customer_id"] == user_id
+    is_rider = delivery.get("rider_id") == user_id
+    is_merchant = delivery["merchant_id"] == user_id
     
-    if not (is_customer or is_driver):
-        raise HTTPException(status_code=403, detail="Not your trip")
+    if not (is_customer or is_rider or is_merchant):
+        raise HTTPException(status_code=403, detail="Not your delivery")
     
-    if trip["status"] == "completed":
-        raise HTTPException(status_code=400, detail="Cannot cancel completed trip")
+    if delivery["status"] == "delivered":
+        raise HTTPException(status_code=400, detail="Cannot cancel completed delivery")
     
-    await db.trips.update_one(
-        {"_id": trip_id},
+    await db.deliveries.update_one(
+        {"_id": delivery_id},
         {
             "$set": {
                 "status": "cancelled",
-                "cancel_reason": reason or "cancelled_by_user"
+                "cancel_reason": reason or "cancelled_by_user",
+                "cancellation_time": datetime.utcnow()
             }
         }
     )
     
-    return {"message": "Trip cancelled", "trip_id": trip_id}
+    return {"message": "Delivery cancelled", "delivery_id": delivery_id}
 
 
-@router.post("/{trip_id}/location")
+@router.post("/{delivery_id}/location")
 async def update_location(
-    trip_id: str,
-    location: TripLocationUpdate,
+    delivery_id: str,
+    location: DeliveryLocationUpdate,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Update driver location during trip (for tracking)
+    Update rider location during delivery (for tracking)
     """
-    trip = await db.trips.find_one({"_id": trip_id})
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
     
-    if trip["driver_id"] != str(current_user["_id"]):
-        raise HTTPException(status_code=403, detail="Not your trip")
+    if delivery["rider_id"] != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="Not your delivery")
     
     # Store location update for real-time tracking
-    await db.trip_locations.insert_one({
-        "trip_id": trip_id,
+    await db.delivery_locations.insert_one({
+        "delivery_id": delivery_id,
         "latitude": location.latitude,
         "longitude": location.longitude,
         "timestamp": datetime.utcnow()
@@ -260,52 +393,52 @@ async def update_location(
     return {"message": "Location updated"}
 
 
-@router.get("/{trip_id}")
-async def get_trip(
-    trip_id: str,
+@router.get("/{delivery_id}")
+async def get_delivery(
+    delivery_id: str,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Get trip details
+    Get delivery details
     """
-    trip = await db.trips.find_one({"_id": trip_id})
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
     
-    return Trip(**trip).dict()
+    return Delivery(**delivery).dict()
 
 
-@router.post("/{trip_id}/share")
-async def share_trip(
-    trip_id: str,
-    emergency_contact_id: str,
+@router.post("/{delivery_id}/rate")
+async def rate_delivery(
+    delivery_id: str,
+    rating: int,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
     """
-    Share trip with emergency contact (safety feature)
+    Rate the delivery (1-5 stars)
     """
-    trip = await db.trips.find_one({"_id": trip_id})
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+    if rating < 1 or rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
     
-    if trip["customer_id"] != str(current_user["_id"]):
-        raise HTTPException(status_code=403, detail="Not your trip")
+    delivery = await db.deliveries.find_one({"_id": delivery_id})
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
     
-    # Add to shared list
-    await db.trips.update_one(
-        {"_id": trip_id},
-        {"$addToSet": {"trip_shared_with": emergency_contact_id}}
-    )
+    user_id = str(current_user["_id"])
     
-    # Notify emergency contact
-    await db.notifications.insert_one({
-        "user_id": emergency_contact_id,
-        "type": "trip_shared",
-        "trip_id": trip_id,
-        "message": f"Someone shared a trip with you for safety tracking",
-        "created_at": datetime.utcnow()
-    })
+    if delivery["customer_id"] == user_id:
+        await db.deliveries.update_one(
+            {"_id": delivery_id},
+            {"$set": {"customer_rating": rating}}
+        )
+    elif delivery.get("rider_id") == user_id:
+        await db.deliveries.update_one(
+            {"_id": delivery_id},
+            {"$set": {"rider_rating": rating}}
+        )
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized to rate this delivery")
     
-    return {"message": "Trip shared with emergency contact"}
+    return {"message": "Rating submitted", "rating": rating}
