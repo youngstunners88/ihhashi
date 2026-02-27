@@ -128,3 +128,17 @@ class Tip(BaseModel):
     platform_fee: float = 0.0  # Always 0 - platform takes no cut of tips
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# Aliases for backwards compatibility with models/__init__.py
+Delivery = DeliveryServiceMan
+
+
+class DeliveryCreate(BaseModel):
+    """Schema for creating a delivery serviceman profile"""
+    full_name: str
+    phone: str
+    transport_mode: TransportMode = TransportMode.ON_FOOT
+    base_fee: float = 20.0
+    per_km_rate: float = 5.0
+    minimum_fee: float = 15.0

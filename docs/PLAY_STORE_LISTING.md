@@ -74,8 +74,9 @@ apksigner sign --ks ihhashi.keystore --out ihhashi-release-signed.apk ihhashi-re
 4. `profile-screenshot.png` - User profile
 - Location: `/home/workspace/iHhashi/docs/screenshots/`
 
-### Feature Graphic (Optional)
-- 1024 x 500px hero image - Not yet created
+### Feature Graphic ✅
+- 1024 x 500px hero image
+- Location: `/home/workspace/iHhashi/docs/screenshots/feature-graphic.png`
 
 ## URLs Required
 
@@ -101,6 +102,7 @@ apksigner sign --ks ihhashi.keystore --out ihhashi-release-signed.apk ihhashi-re
 | Age rating (Everyone) | ✅ |
 | Release APK (unsigned) | ✅ |
 | Signed release APK | ✅ Complete |
+| Feature Graphic | ✅ |
 | App preview video | ❌ Optional |
 
 ## Next Steps for Submission

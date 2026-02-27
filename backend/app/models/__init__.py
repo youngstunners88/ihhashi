@@ -1,4 +1,4 @@
-from app.models.user import User, UserCreate, UserLogin, UserUpdate, UserRole
+from app.models.user import User, UserCreate, UserLogin, UserUpdate, UserRole, UserLocation
 from app.models.buyer import Buyer, BuyerCreate, BuyerUpdate, BuyerStatus, DeliveryAddress, OTPRequest, OTPVerify
 from app.models.driver import Driver, DriverCreate, DriverLocation, DriverLocationUpdate, DriverStatus, DriverStatusUpdate, VehicleInfo, VehicleType
 from app.models.order import Order, OrderCreate, OrderStatus, OrderStatusUpdate, OrderItem, DeliveryInfo

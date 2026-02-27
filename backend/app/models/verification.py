@@ -163,3 +163,7 @@ class CustomerVerification(BaseModel):
         docs = [self.id_document, self.profile_photo]
         completed = sum(1 for d in docs if d is not None)
         return (completed / 2) * 100
+
+
+# Alias for backwards compatibility
+Verification = VendorVerification

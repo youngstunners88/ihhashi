@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from bson import ObjectId
 from app.config import settings
 from app.models import User, UserCreate, UserRole
 from app.database import get_collection
@@ -75,7 +76,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         raise credentials_exception
     
     users_col = get_collection("users")
-    user_doc = await users_col.find_one({"_id": user_id})
+    user_doc = await users_col.find_one({"_id": ObjectId(user_id)})
     if not user_doc:
         raise credentials_exception
     
