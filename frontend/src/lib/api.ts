@@ -71,7 +71,7 @@ api.interceptors.response.use(
       const currentPath = window.location.pathname;
       if (!currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
         const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/login?session_expired=1&return=${returnUrl}`;
+        window.location.href = `/auth?session_expired=1&return=${returnUrl}`;
       }
       return Promise.reject(error);
     }
