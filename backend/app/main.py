@@ -12,6 +12,7 @@ from app.routes.merchants import router as merchants_router
 from app.routes.riders import router as riders_router
 from app.routes.vendors import router as vendors_router
 from app.routes.delivery_servicemen import router as servicemen_router
+from app.routes.referrals import router as referrals_router
 from app.routes import trips, payments
 from app.routes.websocket import router as websocket_router
 from app.routes.nduna import router as nduna_router
@@ -80,7 +81,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="iHhashi API",
     description="Buyer-centric delivery platform for South Africa",
-    version="0.3.0",
+    version="1.0.0",
     lifespan=lifespan
 )
 
@@ -110,6 +111,7 @@ api_v1.include_router(merchants_router, prefix="/merchants", tags=["merchants"])
 api_v1.include_router(riders_router, prefix="/riders", tags=["riders"])
 api_v1.include_router(vendors_router, prefix="/vendors", tags=["vendors"])
 api_v1.include_router(servicemen_router, prefix="/delivery-servicemen", tags=["delivery-servicemen"])
+api_v1.include_router(referrals_router, prefix="/referrals", tags=["referrals"])
 api_v1.include_router(trips.router, prefix="/trips", tags=["trips"])
 api_v1.include_router(payments.router, prefix="/payments", tags=["payments"])
 
@@ -125,13 +127,15 @@ app.include_router(nduna_router, prefix="/api/nduna", tags=["nduna-chatbot"])
 async def root():
     return {
         "name": "iHhashi API",
-        "version": "0.2.0",
+        "version": "0.4.2",
         "status": "operational",
         "features": [
             "Blue Horse verification",
             "Multi-modal delivery",
-            "45-day free trial",
-            "0% tip fee"
+            "45-day free trial + referral bonuses",
+            "0% tip fee",
+            "Hashi Coins rewards for customers",
+            "Tiered loyalty program"
         ],
         "timestamp": datetime.utcnow().isoformat()
     }

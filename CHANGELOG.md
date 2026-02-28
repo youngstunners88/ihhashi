@@ -154,7 +154,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Status |
 |---------|------|--------|
-| 0.4.0 | 2026-02-27 | Current |
+| 0.4.2 | 2026-02-27 | Current |
+| 0.4.1 | 2026-02-27 | Released |
+| 0.4.0 | 2026-02-27 | Released |
 | 0.3.0 | 2026-02-27 | Released |
 | 0.2.0 | 2026-02-26 | Released |
 | 0.1.0 | 2026-02-25 | Initial Release |

@@ -68,6 +68,12 @@ class AccountRecord(BaseModel):
     trial_started_at: datetime = Field(default_factory=datetime.utcnow)
     trial_ends_at: Optional[datetime] = None  # 45 days from trial_started_at
     
+    # Referral system - Bonus days from vendor referrals
+    referral_code: Optional[str] = None  # User's own referral code
+    referred_by: Optional[str] = None  # Referral code used during signup
+    bonus_days_from_referrals: int = 0  # Extra days earned from referrals
+    max_bonus_days: int = 90  # Maximum bonus days allowed (3 months)
+    
     # Warning system
     warnings: List[UserWarning] = []
     warning_count: int = 0
@@ -94,16 +100,47 @@ class AccountRecord(BaseModel):
             return False
         if self.trial_ends_at is None:
             return True
-        return datetime.utcnow() < self.trial_ends_at
+        # Include bonus days in trial end calculation
+        effective_end = self._get_effective_trial_end()
+        return datetime.utcnow() < effective_end
+    
+    def _get_effective_trial_end(self) -> datetime:
+        """Calculate trial end including bonus days from referrals"""
+        if self.trial_ends_at is None:
+            return datetime.utcnow()
+        bonus_seconds = self.bonus_days_from_referrals * 24 * 60 * 60
+        return self.trial_ends_at + timedelta(seconds=bonus_seconds)
     
     @property
     def trial_days_remaining(self) -> int:
         if not self.is_trial_active:
             return 0
         if self.trial_ends_at is None:
-            return 45
-        delta = self.trial_ends_at - datetime.utcnow()
+            return 45 + self.bonus_days_from_referrals
+        effective_end = self._get_effective_trial_end()
+        delta = effective_end - datetime.utcnow()
         return max(0, delta.days)
+    
+    def add_referral_bonus(self, days: int = 2) -> dict:
+        """Add bonus days from a referral. Returns result dict."""
+        if self.bonus_days_from_referrals >= self.max_bonus_days:
+            return {
+                "success": False,
+                "message": "Maximum bonus days already reached",
+                "current_bonus": self.bonus_days_from_referrals,
+                "max_bonus": self.max_bonus_days
+            }
+        
+        new_bonus = min(days, self.max_bonus_days - self.bonus_days_from_referrals)
+        self.bonus_days_from_referrals += new_bonus
+        
+        return {
+            "success": True,
+            "message": f"Added {new_bonus} bonus days to your trial!",
+            "bonus_added": new_bonus,
+            "total_bonus_days": self.bonus_days_from_referrals,
+            "trial_days_remaining": self.trial_days_remaining
+        }
     
     def issue_warning(self, warning: UserWarning) -> bool:
         """Issue a warning and check if suspension needed"""
@@ -122,3 +159,7 @@ class AccountRecord(BaseModel):
         self.status = AccountStatus.TERMINATED
         self.terminated_at = datetime.utcnow()
         self.termination_reason = reason
+
+
+# Import timedelta for the new methods
+from datetime import timedelta

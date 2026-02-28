@@ -1,15 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from typing import Optional, List
 from datetime import datetime, timedelta
 from app.services.auth import get_current_user
 from app.models.verification import (
     VendorVerification, VerificationStatus, DocumentType, VerificationDocument
 )
-from app.models.account import AccountStatus, AccountRecord
+from app.models.account import AccountRecord, AccountStatus
+from app.models.referral import (
+    ReferralCode, Referral, ReferralStatus, ReferralType,
+    VendorReferralStats, ReferralReward
+)
 from app.config import settings
 from pydantic import BaseModel
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class VendorApplication(BaseModel):
@@ -24,6 +30,7 @@ class VendorApplication(BaseModel):
     email: str
     description: str
     category: str
+    referral_code: Optional[str] = None  # Referral code from another vendor
 
 
 class DocumentUpload(BaseModel):
@@ -48,6 +55,20 @@ async def apply_as_vendor(
         trial_ends_at=trial_ends
     )
     
+    # Generate referral code for this new vendor
+    referral_code = ReferralCode.generate_code("IH-V")
+    
+    # If a referral code was provided, process it
+    referral_bonus = None
+    if application.referral_code:
+        # TODO: Validate and process referral
+        # The referrer gets +2 days on their trial
+        referral_bonus = {
+            "code_used": application.referral_code,
+            "bonus_for_referrer": "2 days added to their trial",
+            "your_welcome": "Thanks for using a referral link!"
+        }
+    
     # Create vendor verification record
     verification = VendorVerification(
         vendor_id=current_user.id,
@@ -63,15 +84,18 @@ async def apply_as_vendor(
     )
     
     return {
-        "message": "Vendor application submitted",
+        "message": "Vendor application submitted successfully!",
         "trial_ends": trial_ends.isoformat(),
         "trial_days_remaining": settings.free_trial_days,
         "verification_status": "unverified",
+        "your_referral_code": referral_code,
+        "referral_bonus": referral_bonus,
         "next_steps": [
             "Upload ID document",
             "Upload company registration (if applicable)",
             "Upload proof of business address",
-            "Complete Blue Horse verification for higher ranking"
+            "Complete Blue Horse verification for higher ranking",
+            f"Share your referral code {referral_code} with other vendors to earn 2 FREE DAYS per signup!"
         ]
     }
 
