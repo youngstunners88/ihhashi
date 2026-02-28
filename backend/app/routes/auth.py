@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import timedelta, datetime, timezone
+from typing import Optional
+from pydantic import BaseModel
 from app.services.auth import (
     authenticate_user, create_access_token, create_refresh_token,
     get_current_user, logout_user
@@ -10,7 +12,14 @@ from app.config import settings
 from app.middleware.rate_limit import limiter
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+# Flexible tokenUrl: works under both /api/auth/login and /api/v1/auth/login
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=True)
+
+
+class LoginRequest(BaseModel):
+    """JSON login body – alternative to OAuth2 form-data."""
+    username: str
+    password: str
 
 
 @router.post("/register", status_code=201)
@@ -24,9 +33,32 @@ async def register(request: Request, user_data: UserCreate):
 
 @router.post("/login")
 @limiter.limit("5/minute")
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
-    """Login. Rate limited to 5/minute per IP to prevent brute force."""
-    user = await authenticate_user(form_data.username, form_data.password)
+async def login(request: Request):
+    """Login via form-data OR JSON body. Rate limited to 5/minute."""
+    username: str = ""
+    password: str = ""
+
+    content_type = request.headers.get("content-type", "")
+
+    if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+        form = await request.form()
+        username = form.get("username", "")
+        password = form.get("password", "")
+    else:
+        try:
+            raw = await request.json()
+            username = raw.get("username") or raw.get("email") or ""
+            password = raw.get("password") or ""
+        except Exception:
+            pass
+
+    if not username or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Username/email and password are required",
+        )
+
+    user = await authenticate_user(username, password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

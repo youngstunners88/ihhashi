@@ -11,7 +11,8 @@ from app.database import get_collection
 from app.core.redis_client import TokenBlacklist
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+# tokenUrl matches the canonical v1 prefix; /api/auth/login also works via compat router
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)

@@ -67,11 +67,17 @@ api.interceptors.response.use(
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       
+      // Don't redirect for auth-check calls (/auth/me) — let the caller handle it
+      const requestUrl = error.config?.url || '';
+      if (requestUrl.includes('/auth/me') || requestUrl.includes('/auth/refresh')) {
+        return Promise.reject(error);
+      }
+
       // Only redirect if not already on auth pages
       const currentPath = window.location.pathname;
-      if (!currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
+      if (!currentPath.startsWith('/auth') && !currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
         const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/login?session_expired=1&return=${returnUrl}`;
+        window.location.href = `/auth?session_expired=1&return=${returnUrl}`;
       }
       return Promise.reject(error);
     }

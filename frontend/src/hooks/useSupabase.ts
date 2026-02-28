@@ -8,6 +8,11 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -29,6 +34,7 @@ export function useAuth() {
 }
 
 export async function signInWithPhone(phone: string) {
+  if (!supabase) return { data: null, error: new Error('Supabase not configured') }
   const { data, error } = await supabase.auth.signInWithOtp({
     phone,
     options: {
@@ -39,6 +45,7 @@ export async function signInWithPhone(phone: string) {
 }
 
 export async function verifyOtp(phone: string, token: string) {
+  if (!supabase) return { data: null, error: new Error('Supabase not configured') }
   const { data, error } = await supabase.auth.verifyOtp({
     phone,
     token,
@@ -48,11 +55,13 @@ export async function verifyOtp(phone: string, token: string) {
 }
 
 export async function signOut() {
+  if (!supabase) return { error: new Error('Supabase not configured') }
   const { error } = await supabase.auth.signOut()
   return { error }
 }
 
 export async function getCurrentUser() {
+  if (!supabase) return null
   const { data: { user } } = await supabase.auth.getUser()
   return user
 }

@@ -99,11 +99,12 @@ app.add_middleware(
 setup_rate_limiting(app)
 
 # ============================================================================
-# Create /api/v1 router - matches frontend expectations
+# Create /api/v1 router (canonical) and /api router (backward-compatible)
 # ============================================================================
 api_v1 = APIRouter(prefix="/api/v1")
+api_compat = APIRouter(prefix="/api")
 
-# Mount all real routes under /api/v1
+# Mount all real routes under /api/v1 (canonical)
 api_v1.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_v1.include_router(orders_router, prefix="/orders", tags=["orders"])
 api_v1.include_router(merchants_router, prefix="/merchants", tags=["merchants"])
@@ -113,8 +114,19 @@ api_v1.include_router(servicemen_router, prefix="/delivery-servicemen", tags=["d
 api_v1.include_router(trips.router, prefix="/trips", tags=["trips"])
 api_v1.include_router(payments.router, prefix="/payments", tags=["payments"])
 
-# Include the v1 router in main app
+# Mirror under /api for backward compatibility (same handlers, no duplication)
+api_compat.include_router(auth_router, prefix="/auth", tags=["auth-compat"])
+api_compat.include_router(orders_router, prefix="/orders", tags=["orders-compat"])
+api_compat.include_router(merchants_router, prefix="/merchants", tags=["merchants-compat"])
+api_compat.include_router(riders_router, prefix="/riders", tags=["riders-compat"])
+api_compat.include_router(vendors_router, prefix="/vendors", tags=["vendors-compat"])
+api_compat.include_router(servicemen_router, prefix="/delivery-servicemen", tags=["delivery-servicemen-compat"])
+api_compat.include_router(trips.router, prefix="/trips", tags=["trips-compat"])
+api_compat.include_router(payments.router, prefix="/payments", tags=["payments-compat"])
+
+# Include both routers – v1 first (canonical), then compat
 app.include_router(api_v1)
+app.include_router(api_compat)
 
 # WebSocket and chatbot at different prefixes
 app.include_router(websocket_router, prefix="/ws", tags=["websocket"])

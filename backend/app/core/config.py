@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     mongodb_url: str = Field(default="mongodb://localhost:27017", env="MONGODB_URL")
     db_name: str = Field(default="ihhashi", env="DB_NAME")
     
-    # Security - MUST be set in production
-    secret_key: str = Field(env="SECRET_KEY")
+    # Security - generated for dev, MUST be set in production
+    secret_key: str = Field(default="", env="SECRET_KEY")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
@@ -107,14 +107,15 @@ class Settings(BaseSettings):
     x_content_type_options: str = "nosniff"
     strict_transport_security: str = "max-age=31536000; includeSubDomains"
 
-    @validator("secret_key")
+    @validator("secret_key", pre=True, always=True)
     def validate_secret_key(cls, v, values):
         env = values.get("environment", "development")
         if env == "production":
             if not v or len(v) < 32:
                 raise ValueError("SECRET_KEY must be at least 32 characters in production")
-        elif not v:
-            # Generate a random key for development
+            return v
+        # Development / CI: generate a safe key when empty
+        if not v:
             return secrets.token_urlsafe(32)
         return v
 
