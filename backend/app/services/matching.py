@@ -261,7 +261,7 @@ class MatchingService:
         await self._assign_rider_with_lock(delivery_id, delivery_data, fare_estimate)
     
     async def _notify_rider(self, rider_id: str, delivery_id: str):
-        """Send push notification to rider"""
+        """Persist notification and send FCM push to rider device."""
         notification = {
             "rider_id": rider_id,
             "delivery_id": delivery_id,
@@ -270,9 +270,18 @@ class MatchingService:
             "created_at": datetime.now(timezone.utc)
         }
         await self.db.notifications.insert_one(notification)
-    
-    async def _notify_customer(self, customer_id: str, message: str):
-        """Send push notification to customer"""
+
+        # Fire FCM if the rider has a stored device token
+        rider = await self.db.riders.find_one({"_id": safe_object_id(rider_id)}, {"fcm_token": 1})
+        if rider and rider.get("fcm_token"):
+            from app.services.fcm import notify_rider_new_delivery
+            await notify_rider_new_delivery(
+                token=rider["fcm_token"],
+                delivery_id=delivery_id,
+            )
+
+    async def _notify_customer(self, customer_id: str, message: str, status: str = "pending"):
+        """Persist notification and send FCM push to customer device."""
         notification = {
             "customer_id": customer_id,
             "type": "delivery_update",
@@ -280,9 +289,20 @@ class MatchingService:
             "created_at": datetime.now(timezone.utc)
         }
         await self.db.notifications.insert_one(notification)
-    
+
+        # Fire FCM if the customer has a stored device token
+        user = await self.db.users.find_one({"_id": safe_object_id(customer_id)}, {"fcm_token": 1})
+        if user and user.get("fcm_token"):
+            from app.services.fcm import notify_customer_order_update
+            await notify_customer_order_update(
+                token=user["fcm_token"],
+                order_id="",
+                status=status,
+                message=message,
+            )
+
     async def _notify_merchant(self, merchant_id: str, message: str, delivery_id: str = None):
-        """Send push notification to merchant"""
+        """Persist notification and send FCM push to merchant device."""
         notification = {
             "merchant_id": merchant_id,
             "delivery_id": delivery_id,
@@ -291,6 +311,18 @@ class MatchingService:
             "created_at": datetime.now(timezone.utc)
         }
         await self.db.notifications.insert_one(notification)
+
+        # Fire FCM if the merchant has a stored device token
+        merchant = await self.db.merchants.find_one(
+            {"_id": safe_object_id(merchant_id)}, {"fcm_token": 1}
+        )
+        if merchant and merchant.get("fcm_token"):
+            from app.services.fcm import notify_merchant_new_order
+            await notify_merchant_new_order(
+                token=merchant["fcm_token"],
+                order_id=delivery_id or "",
+                item_summary=message,
+            )
     
     async def release_rider(self, rider_id: str):
         """Release a rider from a delivery assignment"""

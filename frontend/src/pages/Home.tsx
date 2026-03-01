@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, ShoppingCart, Home, Clock, User, Star, ChevronRight } from 'lucide-react'
+import { Search, ShoppingCart, Home, Clock, User, Star, ChevronRight, MapPin } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { merchantsAPI, productsAPI } from '../lib/api'
+import { useUserLocation } from '../hooks/useUserLocation'
 
 interface HomeProps {
   isAuthenticated: boolean
@@ -14,22 +17,28 @@ const categories = [
   { id: 'dairy', name: 'Dairy', icon: '🥛', color: 'bg-blue-100' },
 ]
 
-const popularMerchants = [
-  { id: '1', name: 'KFC Rosebank', rating: 4.8, reviews: 234, deliveryTime: '20-30', deliveryFee: 15, image: 'https://placehold.co/200x120/FFD700/1A1A1A?text=KFC', category: 'Fast Food' },
-  { id: '2', name: 'Fresh Market', rating: 4.6, reviews: 189, deliveryTime: '30-45', deliveryFee: 20, image: 'https://placehold.co/200x120/22C55E/white?text=Fresh', category: 'Groceries' },
-  { id: '3', name: 'Fruit Republic', rating: 4.9, reviews: 156, deliveryTime: '25-35', deliveryFee: 12, image: 'https://placehold.co/200x120/EF4444/white?text=Fruit', category: 'Fruits' },
-  { id: '4', name: 'Veggie King', rating: 4.7, reviews: 98, deliveryTime: '35-50', deliveryFee: 18, image: 'https://placehold.co/200x120/10B981/white?text=Veggie', category: 'Vegetables' },
-]
-
-const featuredProducts = [
-  { id: '1', name: 'Chicken Bucket (8pc)', price: 149, merchant: 'KFC Rosebank', image: 'https://placehold.co/200x200/FFD700/1A1A1A?text=🍗' },
-  { id: '2', name: 'Fresh Apples (1kg)', price: 35, merchant: 'Fruit Republic', image: 'https://placehold.co/200x200/EF4444/white?text=🍎' },
-  { id: '3', name: 'Full Cream Milk (2L)', price: 42, merchant: 'Fresh Market', image: 'https://placehold.co/200x200/3B82F6/white?text=🥛' },
-  { id: '4', name: 'Mixed Veggies Pack', price: 55, merchant: 'Veggie King', image: 'https://placehold.co/200x200/10B981/white?text=🥬' },
-]
-
 export default function Home({ isAuthenticated }: HomeProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const { location, error: locationError } = useUserLocation()
+
+  const { data: merchantsData } = useQuery({
+    queryKey: ['merchants', 'nearby', location.lat, location.lng],
+    queryFn: () =>
+      merchantsAPI
+        .nearby(location.lat, location.lng, 5)
+        .then((r) => r.data),
+    staleTime: 60_000,
+  })
+
+  const { data: productsData } = useQuery({
+    queryKey: ['products', 'featured'],
+    queryFn: () =>
+      productsAPI.search('').then((r) => r.data),
+    staleTime: 60_000,
+  })
+
+  const nearbyMerchants: any[] = merchantsData?.merchants ?? merchantsData ?? []
+  const featuredProducts: any[] = productsData?.products ?? productsData ?? []
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -101,50 +110,80 @@ export default function Home({ isAuthenticated }: HomeProps) {
         </div>
       </div>
 
-      {/* Popular Merchants */}
+      {/* Location notice */}
+      {locationError && (
+        <div className="max-w-lg mx-auto px-4 mt-3">
+          <div className="flex items-center gap-2 text-xs text-secondary-400 bg-white rounded-xl px-3 py-2 shadow-sm">
+            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{locationError}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Nearby Merchants */}
       <div className="max-w-lg mx-auto px-4 mt-6">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-bold text-lg text-secondary-600">Popular Near You</h3>
+          <h3 className="font-bold text-lg text-secondary-600">
+            {location.isReal ? 'Near You' : 'Popular Near You'}
+          </h3>
           <Link to="/merchants" className="text-primary text-sm font-medium hover:text-primary-600 transition-colors">
             See all
           </Link>
         </div>
         <div className="space-y-3">
-          {popularMerchants.map((merchant) => (
-            <Link
-              key={merchant.id}
-              to={`/merchant/${merchant.id}`}
-              className="block bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-shadow overflow-hidden"
-            >
-              <div className="flex">
-                <img 
-                  src={merchant.image} 
-                  alt={merchant.name} 
-                  className="w-28 h-24 object-cover" 
-                />
-                <div className="flex-1 p-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-semibold text-secondary-600">{merchant.name}</h4>
-                      <p className="text-xs text-secondary-400">{merchant.category}</p>
+          {nearbyMerchants.length === 0 ? (
+            <p className="text-sm text-secondary-400 text-center py-4">No merchants found nearby</p>
+          ) : (
+            nearbyMerchants.slice(0, 4).map((merchant: any) => (
+              <Link
+                key={merchant.id ?? merchant._id}
+                to={`/merchant/${merchant.id ?? merchant._id}`}
+                className="block bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-shadow overflow-hidden"
+              >
+                <div className="flex">
+                  {merchant.image_url ? (
+                    <img
+                      src={merchant.image_url}
+                      alt={merchant.name}
+                      className="w-28 h-24 object-cover"
+                    />
+                  ) : (
+                    <div className="w-28 h-24 bg-primary-100 flex items-center justify-center text-3xl flex-shrink-0">
+                      🏪
                     </div>
-                    <div className="flex items-center gap-1 bg-primary-100 px-2 py-0.5 rounded-full">
-                      <Star className="w-3 h-3 text-primary fill-primary" />
-                      <span className="text-xs font-medium text-secondary-600">{merchant.rating}</span>
+                  )}
+                  <div className="flex-1 p-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-semibold text-secondary-600">{merchant.name}</h4>
+                        <p className="text-xs text-secondary-400">{merchant.category}</p>
+                      </div>
+                      {merchant.rating != null && (
+                        <div className="flex items-center gap-1 bg-primary-100 px-2 py-0.5 rounded-full">
+                          <Star className="w-3 h-3 text-primary fill-primary" />
+                          <span className="text-xs font-medium text-secondary-600">
+                            {Number(merchant.rating).toFixed(1)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-secondary-400">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{merchant.deliveryTime} min</span>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-secondary-400">
+                      {merchant.estimated_delivery_time && (
+                        <>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{merchant.estimated_delivery_time} min</span>
+                          </div>
+                          <span>•</span>
+                        </>
+                      )}
+                      <span>R{merchant.delivery_fee ?? 20} delivery</span>
                     </div>
-                    <span>•</span>
-                    <span>R{merchant.deliveryFee} delivery</span>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          )}
         </div>
       </div>
 
@@ -157,28 +196,38 @@ export default function Home({ isAuthenticated }: HomeProps) {
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {featuredProducts.map((product) => (
-            <div 
-              key={product.id} 
-              className="bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-shadow overflow-hidden"
-            >
-              <img 
-                src={product.image} 
-                alt={product.name} 
-                className="w-full aspect-square object-cover" 
-              />
-              <div className="p-3">
-                <h4 className="font-medium text-sm text-secondary-600 line-clamp-1">{product.name}</h4>
-                <p className="text-xs text-secondary-400 mt-0.5">{product.merchant}</p>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="font-bold text-primary">R{product.price}</span>
-                  <button className="bg-secondary-600 text-primary text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-secondary-700 transition-colors">
-                    Add
-                  </button>
+          {featuredProducts.length === 0 ? (
+            <p className="text-sm text-secondary-400 text-center py-4 col-span-2">Loading products…</p>
+          ) : (
+            featuredProducts.slice(0, 4).map((product: any) => (
+              <div
+                key={product.id ?? product._id}
+                className="bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-shadow overflow-hidden"
+              >
+                {product.image_url ? (
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    className="w-full aspect-square object-cover"
+                  />
+                ) : (
+                  <div className="w-full aspect-square bg-gray-100 flex items-center justify-center text-4xl">
+                    🛍️
+                  </div>
+                )}
+                <div className="p-3">
+                  <h4 className="font-medium text-sm text-secondary-600 line-clamp-1">{product.name}</h4>
+                  <p className="text-xs text-secondary-400 mt-0.5">{product.store_name ?? product.merchant}</p>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="font-bold text-primary">R{product.price}</span>
+                    <button className="bg-secondary-600 text-primary text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-secondary-700 transition-colors">
+                      Add
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 

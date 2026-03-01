@@ -16,6 +16,7 @@ from app.routes.referrals import router as referrals_router
 from app.routes import trips, payments
 from app.routes.websocket import router as websocket_router
 from app.routes.nduna import router as nduna_router
+from app.routes.users import router as users_router
 from app.config import settings
 from app.database import (
     connect_db, 
@@ -114,6 +115,7 @@ api_v1.include_router(servicemen_router, prefix="/delivery-servicemen", tags=["d
 api_v1.include_router(referrals_router, prefix="/referrals", tags=["referrals"])
 api_v1.include_router(trips.router, prefix="/trips", tags=["trips"])
 api_v1.include_router(payments.router, prefix="/payments", tags=["payments"])
+api_v1.include_router(users_router, prefix="/users", tags=["users"])
 
 # Include the v1 router in main app
 app.include_router(api_v1)

@@ -3,7 +3,7 @@ Nduna Chatbot - Multilingual AI Assistant for iHhashi
 Supports all 6 South African languages with Groq LLM
 Now with Product Browsing and Voice Input!
 """
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import httpx
@@ -13,6 +13,7 @@ from datetime import datetime
 from bson import ObjectId
 
 from app.database import get_collection
+from app.middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/nduna", tags=["nduna"])
 
@@ -356,7 +357,8 @@ async def get_supported_languages():
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(chat_message: ChatMessage):
+@limiter.limit("20/minute")
+async def chat(request: Request, chat_message: ChatMessage):
     """
     Chat with Nduna AI assistant with function calling support
     
@@ -484,7 +486,9 @@ async def chat(chat_message: ChatMessage):
 # ============ NEW VOICE ENDPOINT ============
 
 @router.post("/voice", response_model=VoiceTranscriptionResponse)
+@limiter.limit("10/minute")
 async def transcribe_voice(
+    request: Request,
     audio_file: UploadFile = File(...),
     language: str = Form(default="en")
 ):
@@ -565,7 +569,9 @@ async def transcribe_voice(
 
 
 @router.post("/voice/chat", response_model=ChatResponse)
+@limiter.limit("10/minute")
 async def voice_chat(
+    request: Request,
     audio_file: UploadFile = File(...),
     language: str = Form(default="en"),
     user_id: Optional[str] = Form(default=None)

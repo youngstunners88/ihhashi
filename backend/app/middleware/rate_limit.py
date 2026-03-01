@@ -52,3 +52,9 @@ def order_rate_limit(limit: str = "20/minute"):
     def decorator(func):
         return limiter.limit(limit)(func)
     return decorator
+
+def chatbot_rate_limit(limit: str = "20/minute"):
+    """Rate limiting decorator for chatbot endpoints (cost-aware — each call hits Groq)"""
+    def decorator(func):
+        return limiter.limit(limit)(func)
+    return decorator

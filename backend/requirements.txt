@@ -17,6 +17,7 @@ slowapi>=0.1.9
 sentry-sdk[fastapi]>=1.40.0
 posthog>=3.5.0
 python-telegram-bot>=21.0
+firebase-admin>=6.5.0
 
 # Testing dependencies
 pytest>=8.0.0

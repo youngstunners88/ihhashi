@@ -12,6 +12,7 @@ import Profile from './pages/profile/Profile'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import SplashScreen from './components/SplashScreen'
 import { authAPI } from './lib/api'
+import { useNotifications } from './hooks/useNotifications'
 
 // Only init Sentry if DSN is set via env — never hardcode credentials
 const GLITCHTIP_DSN = import.meta.env.VITE_GLITCHTIP_DSN
@@ -92,6 +93,9 @@ function App() {
     checkAuth()
     return () => clearTimeout(splashTimer)
   }, [])
+
+  // Register FCM device token whenever the user is authenticated
+  useNotifications(!!user)
 
   const login = (userData: AuthUser) => setUser(userData)
   const logout = async () => {
