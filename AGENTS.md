@@ -19,7 +19,7 @@
 Delivery platform for South Africa, inspired by Ele.me.
 - **Started**: 2026-02-25
 - **Tech Stack**: FastAPI + MongoDB (backend), React + Tailwind (frontend)
-- **Version**: 0.2.0
+- **Version**: 1.0.0 (Referral & Rewards System)
 
 ## Architecture
 
@@ -177,6 +177,51 @@ Delivery platform for South Africa, inspired by Ele.me.
 
 ---
 
+## ✅ FEATURES IMPLEMENTED (v0.4.0)
+
+### Vendor Referral System (v0.4.0)
+- **Referral Bonus**: +2 FREE DAYS per successful vendor referral
+- **Maximum Bonus**: 90 extra days (3 months total possible)
+- **How It Works**: 
+  1. Vendor gets unique referral code (format: IH-V-XXXXXX)
+  2. New vendor signs up using the code
+  3. Referrer's trial is extended by 2 days automatically
+- **Tracking**: Referrals tracked in AccountRecord model
+- **API**: `/api/v1/referrals/*` and `/api/v1/vendors/apply`
+
+### Customer Hashi Coins Rewards (v0.4.0)
+- **Virtual Currency**: "Hashi Coins" earned through referrals and activity
+- **Referral Rewards**:
+  - Referrer: 50 Hashi Coins per successful referral
+  - New customer: 25 Hashi Coins welcome bonus
+- **Redemption Options**:
+  - 100 coins = Free delivery
+  - 150 coins = R15 discount
+  - 300 coins = R30 discount
+- **Coin Value**: 1 Hashi Coin = 10 cents (R0.10)
+
+### Customer Tier System (v0.4.0)
+Based on successful referrals:
+- **Bronze** (1-5): 5% off, Standard support 🥉
+- **Silver** (6-15): 10% off, 1 free delivery/month, Priority support 🥈
+- **Gold** (16-50): 15% off, 2 free deliveries/month, VIP support, Early access 🥇
+- **Platinum** (51+): 20% off, Unlimited free delivery, Dedicated manager 💎
+
+### API Endpoints Added (v0.4.0)
+- `/api/v1/referrals/*` - General referral operations
+- `/api/v1/customer-rewards/*` - Customer rewards dashboard, tier info, coin redemption
+- Vendor application now accepts `referral_code` parameter
+
+### New Models (v0.4.0)
+- `ReferralCode` - Unique referral codes for users
+- `Referral` - Referral tracking records
+- `VendorReferralStats` - Vendor referral statistics
+- `CustomerRewardAccount` - Customer rewards and tier tracking
+- `CoinTransaction` - Hashi Coin transaction history
+- `RewardRedemption` - Reward redemption records
+
+---
+
 ## 🔧 INFRASTRUCTURE
 
 ### Error Tracking
@@ -214,3 +259,59 @@ This automatically updates:
 
 ### Rule
 Zo has a rule to automatically run this sync whenever iHhashi is updated.
+
+---
+
+## 📊 META ADS AUTOMATION
+
+### Overview
+Autonomous Meta Ads management system for iHhashi marketing.
+
+### Location
+`marketing/meta-ads/` in the iHhashi repository
+
+### Daily Workflow
+1. **Health Check** - Assess overall account health
+2. **Fatigue Detection** - Find ads with audience fatigue (frequency > 3.5)
+3. **Auto-Pause** - Stop campaigns bleeding money (CPA > 2.5x target)
+4. **Budget Optimization** - Shift spend to top performers
+5. **Copy Generation** - Create variations from winners
+6. **Morning Brief** - Telegram summary
+7. **GitHub Issues** - Create issues for findings
+
+### Quick Start
+```bash
+# Full autonomous cycle
+bun marketing/meta-ads/scripts/autonomous.ts --execute --telegram
+
+# Individual scripts
+bun marketing/meta-ads/scripts/health-check.ts
+bun marketing/meta-ads/scripts/fatigue-detector.ts
+bun marketing/meta-ads/scripts/auto-pause.ts
+bun marketing/meta-ads/scripts/budget-optimizer.ts
+bun marketing/meta-ads/scripts/copy-generator.ts
+bun marketing/meta-ads/scripts/morning-brief.ts
+```
+
+### Required Secrets (Zo Settings > Advanced)
+- `META_AD_ACCOUNT_ID` - Meta ad account ID
+- `META_ACCESS_TOKEN` - Marketing API token
+- `META_PAGE_ID` - Facebook Page ID
+- `META_INSTAGRAM_ACCOUNT_ID` - Instagram account (optional)
+- `META_TARGET_CPA` - Target CPA (default: $5)
+- `GITHUB_TOKEN` - For issue creation (optional)
+
+### GitHub Issues Integration
+- Fatigue warnings → `ads-fatigue` label
+- Paused bleeders → `ads-critical` label
+- Budget suggestions → `ads-budget` label
+- Copy ideas → `ads-copy` label
+
+View issues: https://github.com/youngstunners88/ihhashi/issues?q=is:issue+is:open+label:ads
+
+### Safety Features
+- All new ads start paused
+- Auto-pause requires 48hrs poor performance
+- Budget shifts capped at 20%/day
+- All actions logged with timestamps
+- Telegram approval for major changes
