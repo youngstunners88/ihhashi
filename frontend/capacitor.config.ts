@@ -4,9 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.ihhashi.delivery',
   appName: 'iHhashi',
   webDir: 'dist',
-  backgroundColor: '#FF6B35',
+  backgroundColor: '#000000',
   android: {
-    loaderColor: '#FF6B35'
+    loaderColor: '#FFD700'
   }
 };
 

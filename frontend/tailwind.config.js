@@ -8,9 +8,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        // iHhashi brand colors - Black & Yellow theme
+        // iHhashi brand — Kimi K2.5 high-contrast palette
         primary: {
-          DEFAULT: '#FFD700', // Gold/Yellow
+          DEFAULT: '#FFD700', // Yellow
           50: '#FFFBEB',
           100: '#FEF3C7',
           200: '#FDE68A',
@@ -23,30 +23,31 @@ export default {
           900: '#5C4A0A',
         },
         secondary: {
-          DEFAULT: '#1A1A1A', // Black
+          DEFAULT: '#000000', // Deep Black
           50: '#F7F7F7',
           100: '#E5E5E5',
           200: '#CCCCCC',
           300: '#B3B3B3',
           400: '#999999',
-          500: '#1A1A1A',
-          600: '#141414',
-          700: '#0D0D0D',
-          800: '#080808',
+          500: '#000000',
+          600: '#000000',
+          700: '#000000',
+          800: '#000000',
           900: '#000000',
         },
         accent: {
-          DEFAULT: '#FFC107', // Amber
+          DEFAULT: '#FFC107',
           dark: '#FFA000',
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
       },
       boxShadow: {
         'card': '0 2px 8px rgba(0, 0, 0, 0.08)',
         'card-hover': '0 4px 16px rgba(0, 0, 0, 0.12)',
         'bottom-sheet': '0 -4px 20px rgba(0, 0, 0, 0.15)',
+        'kasi': '0 8px 32px rgba(255, 215, 0, 0.25)',
       },
       borderRadius: {
         'xl': '12px',
@@ -57,6 +58,7 @@ export default {
         'slide-up': 'slideUp 0.3s ease-out',
         'slide-down': 'slideDown 0.3s ease-out',
         'fade-in': 'fadeIn 0.2s ease-out',
+        'zap-pulse': 'zapPulse 2s ease-in-out infinite',
       },
       keyframes: {
         slideUp: {
@@ -70,6 +72,10 @@ export default {
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        zapPulse: {
+          '0%, 100%': { filter: 'drop-shadow(0 0 4px rgba(255, 215, 0, 0.6))' },
+          '50%': { filter: 'drop-shadow(0 0 12px rgba(255, 215, 0, 1))' },
         },
       },
     },

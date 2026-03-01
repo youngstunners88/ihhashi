@@ -13,10 +13,20 @@ html {
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #FAFAFA;
+  background-color: #FFD700;
+}
+
+#root {
+  background-color: #FFD700;
+  min-height: 100vh;
+}
+
+/* Headers — weight 900 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 900;
 }
 
 /* Custom scrollbar */
@@ -51,28 +61,28 @@ body {
 /* Custom component styles */
 @layer components {
   .card {
-    @apply bg-white rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-shadow;
+    @apply bg-white rounded-2xl p-4 shadow-kasi hover:shadow-card-hover transition-shadow;
   }
 
   .btn-primary {
-    @apply bg-secondary-600 text-primary font-semibold px-4 py-2.5 rounded-xl 
-           hover:bg-secondary-700 active:scale-[0.98] transition-all;
+    @apply bg-secondary text-primary font-semibold px-4 py-2.5 rounded-xl
+           hover:bg-secondary-400 active:scale-[0.98] transition-all shadow-kasi;
   }
 
   .btn-secondary {
-    @apply bg-primary text-secondary-600 font-semibold px-4 py-2.5 rounded-xl 
+    @apply bg-primary text-secondary font-semibold px-4 py-2.5 rounded-xl
            hover:bg-primary-400 active:scale-[0.98] transition-all;
   }
 
   .btn-outline {
-    @apply border-2 border-secondary-600 text-secondary-600 font-semibold px-4 py-2.5 rounded-xl 
-           hover:bg-secondary-600 hover:text-primary active:scale-[0.98] transition-all;
+    @apply border-2 border-secondary text-secondary font-semibold px-4 py-2.5 rounded-xl
+           hover:bg-secondary hover:text-primary active:scale-[0.98] transition-all;
   }
 
   .input {
-    @apply w-full px-4 py-2.5 rounded-xl border border-gray-200 
+    @apply w-full px-4 py-2.5 rounded-xl border border-gray-200
            focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-           placeholder:text-gray-400 text-secondary-600 transition-all;
+           placeholder:text-gray-400 text-secondary transition-all;
   }
 
   .badge {
@@ -80,7 +90,7 @@ body {
   }
 
   .badge-primary {
-    @apply bg-primary-100 text-secondary-600;
+    @apply bg-primary-100 text-secondary;
   }
 
   .badge-success {
@@ -117,7 +127,7 @@ body {
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }
@@ -132,5 +142,5 @@ body {
 /* Selection color */
 ::selection {
   background-color: rgba(255, 215, 0, 0.3);
-  color: #1A1A1A;
+  color: #000000;
 }
