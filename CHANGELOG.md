@@ -5,6 +5,42 @@ All notable changes to iHhashi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-01
+
+### Added - Nduna Chatbot Enhancements
+
+#### Product Browsing with Function Calling
+- **Added** Groq function calling support to Nduna chatbot
+- **Added** `search_merchants` function - search stores, restaurants, pharmacies by query/category/city
+- **Added** `search_products` function - search products and menu items across all merchants
+- **Added** `get_merchant_menu` function - get full catalog for a specific merchant
+- **Added** automatic function execution when users ask about food, groceries, or products
+- **Enhanced** system prompts to instruct AI on when to use browsing functions
+
+#### Voice Input Support
+- **Added** `/nduna/voice` endpoint - transcribe audio using Groq Whisper (whisper-large-v3-turbo)
+- **Added** `/nduna/voice/chat` endpoint - transcribe and get AI response in one call
+- **Added** support for multiple audio formats: mp3, mp4, mpeg, mpga, m4a, wav, webm
+- **Perfect** for Telegram voice messages integration
+
+#### New Browse Endpoints
+- **Added** `GET /nduna/browse/merchants` - direct merchant browsing API
+- **Added** `GET /nduna/browse/products` - direct product browsing API  
+- **Added** `GET /nduna/browse/{merchant_id}/menu` - get merchant catalog
+
+#### Improved Suggestions
+- **Enhanced** quick reply suggestions for store/grocery queries
+- **Added** context-aware suggestions for different merchant types
+
+### Technical Details
+- Uses Groq's Llama 3.3 70B for chat with tool calling
+- Uses Groq's Whisper Large V3 Turbo for fast transcription
+- Maintains key rotation for rate limit resilience (up to 19 Groq keys)
+- All 7 South African languages supported (en, zu, xh, af, st, tn, so)
+
+### Files Changed
+- `backend/app/routes/nduna.py` - Complete overhaul with function calling and voice support
+
 ## [0.4.2] - 2026-02-27
 
 ### Security (Critical Fixes from Security Review)
