@@ -64,13 +64,17 @@ const queryClient = new QueryClient({
 })
 
 // ─── Protected Route ──────────────────────────────────────────────────────────
+const ROLE_DASHBOARDS: Record<string, string> = {
+  merchant: '/merchant/dashboard',
+  rider: '/rider/dashboard',
+}
+
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
   const { isAuthenticated, isLoading, user } = useAuth()
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B35]" /></div>
   if (!isAuthenticated) return <Navigate to="/auth" replace />
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    const dashboards: Record<string, string> = { merchant: '/merchant/dashboard', rider: '/rider/dashboard' }
-    return <Navigate to={dashboards[user.role] || '/'} replace />
+    return <Navigate to={ROLE_DASHBOARDS[user.role] || '/'} replace />
   }
   return <>{children}</>
 }

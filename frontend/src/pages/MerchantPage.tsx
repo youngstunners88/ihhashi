@@ -30,7 +30,7 @@ interface Merchant {
 export function MerchantPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { items, addItem, removeItem, getTotal, getItemCount } = useCart()
+  const { items, addItem, updateQuantity, getTotal, getItemCount } = useCart()
 
   const { data: merchantData, isLoading: merchantLoading } = useQuery({
     queryKey: ['merchant', id],
@@ -45,7 +45,8 @@ export function MerchantPage() {
   })
 
   const merchant: Merchant | undefined = merchantData?.data
-  const products: Product[] = productsData?.data ?? productsData?.data?.products ?? []
+  const raw = productsData?.data
+  const products: Product[] = Array.isArray(raw) ? raw : raw?.products ?? []
 
   const isLoading = merchantLoading || productsLoading
   const cartCount = getItemCount()
@@ -67,13 +68,9 @@ export function MerchantPage() {
   }
 
   const handleRemove = (productId: string) => {
-    const item = items.find(i => i.productId === productId)
-    if (item && item.quantity > 1) {
-      // useCart's addItem merges quantities, so we use removeItem and re-add with qty-1
-      removeItem(productId)
-      addItem({ ...item, quantity: item.quantity - 1 })
-    } else {
-      removeItem(productId)
+    const qty = getQuantity(productId)
+    if (qty > 0) {
+      updateQuantity(productId, qty - 1)
     }
   }
 
