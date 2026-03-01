@@ -11,6 +11,17 @@ This file provides context for AI assistants (Claude, Copilot, etc.) working in 
 **Production URL:** https://ihhashi.co.za
 **Current version:** 0.4.2
 
+### North Star Mission
+
+> **This app must be exceptional and simple to use. It must feel like the people's app — not a foreign app from the USA.**
+
+Every building decision — UI language, UX patterns, feature prioritisation, performance trade-offs, onboarding flows — must be filtered through this lens:
+
+- **Locally rooted:** Language, imagery, township slang, and cultural context should feel native to Mzansi, not transplanted from Silicon Valley.
+- **Radically simple:** If a feature adds friction, cut it. If a flow requires explanation, redesign it. Our users span urban professionals and spaza shop owners — the app must work for both.
+- **People-first:** Decisions that benefit the community (riders, vendors, buyers) take priority over vanity metrics or tech complexity.
+- **Low-bandwidth reality:** Optimise relentlessly for SA network conditions — data-saver mode, offline resilience, and fast load times on mid-range Android devices are non-negotiable.
+
 ---
 
 ## Architecture
