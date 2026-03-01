@@ -7,6 +7,9 @@ import Home from './pages/Home'
 import Auth from './pages/auth/Auth'
 import Products from './pages/catalog/Products'
 import { CartPage } from './pages/CartPage'
+import { MerchantPage } from './pages/MerchantPage'
+import { MerchantDashboard } from './pages/MerchantDashboard'
+import { RiderDashboard } from './pages/RiderDashboard'
 import Orders from './pages/orders/Orders'
 import Profile from './pages/profile/Profile'
 import ErrorBoundary from './components/common/ErrorBoundary'
@@ -61,10 +64,15 @@ const queryClient = new QueryClient({
 })
 
 // ─── Protected Route ──────────────────────────────────────────────────────────
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
+  const { isAuthenticated, isLoading, user } = useAuth()
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B35]" /></div>
-  return isAuthenticated ? <>{children}</> : <Navigate to="/auth" replace />
+  if (!isAuthenticated) return <Navigate to="/auth" replace />
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    const dashboards: Record<string, string> = { merchant: '/merchant/dashboard', rider: '/rider/dashboard' }
+    return <Navigate to={dashboards[user.role] || '/'} replace />
+  }
+  return <>{children}</>
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────────
@@ -122,6 +130,17 @@ function App() {
               <Route path="/products" element={<Products />} />
               <Route path="/products/:category" element={<Products />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/merchant/dashboard" element={
+                <ProtectedRoute allowedRoles={['merchant']}>
+                  <MerchantDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/rider/dashboard" element={
+                <ProtectedRoute allowedRoles={['rider']}>
+                  <RiderDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/merchant/:id" element={<MerchantPage />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/orders/:id" element={<Orders />} />
               <Route

@@ -10,7 +10,7 @@ type PaymentMethod = 'cash' | 'card'
 export function CartPage() {
   const navigate = useNavigate()
   const { items, removeItem, updateQuantity, clearCart, getTotal, getItemCount } = useCart()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated } = useAuth()
 
   const [address, setAddress] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
