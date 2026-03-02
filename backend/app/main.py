@@ -13,6 +13,7 @@ from app.routes.riders import router as riders_router
 from app.routes.vendors import router as vendors_router
 from app.routes.delivery_servicemen import router as servicemen_router
 from app.routes.referrals import router as referrals_router
+from app.routes.customer_rewards import router as customer_rewards_router
 from app.routes import trips, payments
 from app.routes.websocket import router as websocket_router
 from app.routes.nduna import router as nduna_router
@@ -112,6 +113,7 @@ api_v1.include_router(riders_router, prefix="/riders", tags=["riders"])
 api_v1.include_router(vendors_router, prefix="/vendors", tags=["vendors"])
 api_v1.include_router(servicemen_router, prefix="/delivery-servicemen", tags=["delivery-servicemen"])
 api_v1.include_router(referrals_router, prefix="/referrals", tags=["referrals"])
+api_v1.include_router(customer_rewards_router, prefix="/customer-rewards", tags=["customer-rewards"])
 api_v1.include_router(trips.router, prefix="/trips", tags=["trips"])
 api_v1.include_router(payments.router, prefix="/payments", tags=["payments"])
 

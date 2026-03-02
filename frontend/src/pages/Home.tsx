@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, ShoppingCart, Home, Clock, User, Star, ChevronRight } from 'lucide-react'
-
-interface HomeProps {
-  isAuthenticated: boolean
-}
+import { Search, ShoppingCart, Clock, User, Star, ChevronRight, Home as HomeIcon } from 'lucide-react'
+import { useAuth } from '../App'
 
 const categories = [
   { id: 'food', name: 'Food', icon: '🍔', color: 'bg-orange-100' },
@@ -28,8 +25,9 @@ const featuredProducts = [
   { id: '4', name: 'Mixed Veggies Pack', price: 55, merchant: 'Veggie King', image: 'https://placehold.co/200x200/10B981/white?text=🥬' },
 ]
 
-export default function Home({ isAuthenticated }: HomeProps) {
+export default function Home() {
   const [searchQuery, setSearchQuery] = useState('')
+  const { isAuthenticated } = useAuth()
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -186,7 +184,7 @@ export default function Home({ isAuthenticated }: HomeProps) {
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 py-2 z-50">
         <div className="max-w-lg mx-auto flex justify-around">
           <Link to="/" className="flex flex-col items-center py-1 px-4">
-            <Home className="w-6 h-6 text-primary" />
+            <HomeIcon className="w-6 h-6 text-primary" />
             <span className="text-xs mt-1 font-medium text-primary">Home</span>
           </Link>
           <Link to="/products" className="flex flex-col items-center py-1 px-4">
