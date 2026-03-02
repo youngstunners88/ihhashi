@@ -14,6 +14,7 @@ from app.database import connect_db, disconnect_db
 from app.routes import websocket
 from app.routes.websocket import PUBSUB_HANDLERS
 from app.services.pubsub_manager import PubSubManager
+from app.services.reconciliation_service import reconciliation_service
 
 # Configure logging
 logging.basicConfig(
@@ -89,6 +90,13 @@ async def lifespan(app: FastAPI):
         # Don't fail startup if Redis is not available
         # The app can still work for single-instance deployments
     
+    # Start payment reconciliation scheduler
+    try:
+        reconciliation_service.start_scheduler()
+        logger.info("Payment reconciliation scheduler started")
+    except Exception as e:
+        logger.error(f"Failed to start reconciliation scheduler: {e}")
+    
     yield
     
     # Shutdown
@@ -104,6 +112,13 @@ async def lifespan(app: FastAPI):
             pass
         logger.info("Pub/sub consumer task cancelled")
     
+    # Stop reconciliation scheduler
+    try:
+        reconciliation_service.stop_scheduler()
+        logger.info("Payment reconciliation scheduler stopped")
+    except Exception as e:
+        logger.error(f"Error stopping reconciliation scheduler: {e}")
+    
     # Stop pub/sub manager
     await PubSubManager.shutdown()
     
@@ -118,9 +133,54 @@ def create_application() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
-        description="Delivery App API with WebSocket support",
+        description="""
+        iHhashi Delivery Platform API
+        
+        ## Features
+        
+        * **Order Management**: Create, track, and manage delivery orders
+        * **Real-time Updates**: WebSocket-based live order tracking
+        * **Payment Processing**: Stripe and Paystack integration
+        * **Rider Management**: Location tracking and assignment
+        * **Push Notifications**: Firebase Cloud Messaging
+        
+        ## Authentication
+        
+        Most endpoints require JWT authentication. Include the token in the Authorization header:
+        ```
+        Authorization: Bearer <your-jwt-token>
+        ```
+        
+        ## Error Codes
+        
+        | Code | Description |
+        |------|-------------|
+        | 400 | Bad Request |
+        | 401 | Unauthorized |
+        | 403 | Forbidden |
+        | 404 | Not Found |
+        | 409 | Conflict |
+        | 429 | Rate Limited |
+        | 500 | Internal Server Error |
+        
+        ## Rate Limiting
+        
+        API endpoints are rate-limited:
+        - General endpoints: 100 requests/minute
+        - Auth endpoints: 5 requests/minute
+        - WebSocket: 5 connections/minute per user
+        """,
         docs_url="/docs" if not settings.is_production else None,
         redoc_url="/redoc" if not settings.is_production else None,
+        openapi_tags=[
+            {"name": "Health", "description": "Health and monitoring endpoints"},
+            {"name": "Authentication", "description": "User authentication and registration"},
+            {"name": "Orders", "description": "Order management endpoints"},
+            {"name": "Payments", "description": "Payment processing endpoints"},
+            {"name": "Riders", "description": "Rider management and tracking"},
+            {"name": "WebSocket", "description": "Real-time WebSocket endpoints"},
+            {"name": "Admin", "description": "Administrative endpoints"},
+        ],
         lifespan=lifespan,
     )
     
@@ -187,6 +247,17 @@ async def readiness_check():
 async def metrics():
     """Prometheus metrics endpoint (placeholder)."""
     return {"todo": "implement prometheus metrics"}
+
+
+@app.get("/admin/reconciliation/status")
+async def reconciliation_status():
+    """Get payment reconciliation status."""
+    stats = await reconciliation_service.get_reconciliation_stats(hours=24)
+    return {
+        "status": "active" if reconciliation_service.scheduler else "inactive",
+        "is_running": reconciliation_service.is_running,
+        "stats": stats
+    }
 
 
 if __name__ == "__main__":

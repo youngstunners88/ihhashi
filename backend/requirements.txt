@@ -21,8 +21,9 @@ passlib[bcrypt]>=1.7.0
 # HTTP client
 httpx>=0.26.0
 
-# Celery for background tasks
+# Background task scheduling
 celery>=5.3.0
+apscheduler>=3.10.0
 
 # Payment processing
 stripe>=7.0.0
