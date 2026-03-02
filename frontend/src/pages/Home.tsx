@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+<<<<<<< HEAD
 import { Search, ShoppingCart, Clock, User, Star, ChevronRight, Home as HomeIcon } from 'lucide-react'
+=======
+import { Search, ShoppingCart, Home as HomeIcon, Clock, User, Star, ChevronRight } from 'lucide-react'
+>>>>>>> 6b8b6df25c72535f94e9840babf3235327af301d
 import { useAuth } from '../App'
 
 const categories = [
@@ -26,6 +30,10 @@ const featuredProducts = [
 ]
 
 export default function Home() {
+<<<<<<< HEAD
+=======
+  const { isAuthenticated } = useAuth()
+>>>>>>> 6b8b6df25c72535f94e9840babf3235327af301d
   const [searchQuery, setSearchQuery] = useState('')
   const { isAuthenticated } = useAuth()
 

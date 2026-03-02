@@ -63,14 +63,14 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     // Handle 401 - unauthorized/session expired
     if (error.response?.status === 401) {
-      // Clear tokens on auth failure
+      // Only redirect if a token was present (session truly expired)
+      const hadToken = !!localStorage.getItem('access_token');
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      
-      // Only redirect if not already on auth pages
+
       const currentPath = window.location.pathname;
-      if (!currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      if (hadToken && !currentPath.startsWith('/auth')) {
+        const returnUrl = encodeURIComponent(currentPath + window.location.search);
         window.location.href = `/auth?session_expired=1&return=${returnUrl}`;
       }
       return Promise.reject(error);
