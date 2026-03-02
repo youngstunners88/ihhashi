@@ -9,6 +9,9 @@ import Products from './pages/catalog/Products'
 import { CartPage } from './pages/CartPage'
 import Orders from './pages/orders/Orders'
 import Profile from './pages/profile/Profile'
+import { MerchantPage } from './pages/MerchantPage'
+import { MerchantDashboard } from './pages/MerchantDashboard'
+import { RiderDashboard } from './pages/RiderDashboard'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import SplashScreen from './components/SplashScreen'
 import { authAPI } from './lib/api'
@@ -60,11 +63,40 @@ const queryClient = new QueryClient({
   },
 })
 
-// ─── Protected Route ──────────────────────────────────────────────────────────
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B35]" /></div>
-  return isAuthenticated ? <>{children}</> : <Navigate to="/auth" replace />
+// ─── Protected Route with Role Support ────────────────────────────────────────
+function ProtectedRoute({ 
+  children, 
+  allowedRoles 
+}: { 
+  children: React.ReactNode
+  allowedRoles?: string[] 
+}) {
+  const { user, isAuthenticated, isLoading } = useAuth()
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B35]" />
+      </div>
+    )
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />
+  }
+  
+  // Role-based redirect for wrong role
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // Redirect to role-appropriate dashboard
+    if (user.role === 'merchant') {
+      return <Navigate to="/merchant/dashboard" replace />
+    } else if (user.role === 'rider' || user.role === 'driver') {
+      return <Navigate to="/rider/dashboard" replace />
+    }
+    return <Navigate to="/" replace />
+  }
+  
+  return <>{children}</>
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────────
@@ -117,13 +149,35 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={<Home isAuthenticated={!!user} />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/:category" element={<Products />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/orders/:id" element={<Orders />} />
+              
+              {/* Public merchant page */}
+              <Route path="/merchant/:id" element={<MerchantPage />} />
+              
+              {/* Role-protected dashboards */}
+              <Route
+                path="/merchant/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['merchant', 'admin']}>
+                    <MerchantDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/rider/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['rider', 'driver', 'admin']}>
+                    <RiderDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              
               <Route
                 path="/profile"
                 element={

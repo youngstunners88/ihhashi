@@ -2,9 +2,9 @@ name: iHhashi CI/CD
 
 on:
   push:
-    branches: [main, master, develop, work]
+    branches: [main, develop, work]
   pull_request:
-    branches: [main, master, develop, work]
+    branches: [main, develop, work]
 
 env:
   REGISTRY: ghcr.io
@@ -173,6 +173,6 @@ jobs:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'table'
-          exit-code: '0'
+          exit-code: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/work') && '1' || '0' }}
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'

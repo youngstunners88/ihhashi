@@ -1,3 +1,15 @@
+"""
+app/config.py - Primary application configuration
+
+⚠️ CONFIG DRIFT WARNING:
+This file and app/core/config.py have similar responsibilities.
+- ALWAYS import from app.config (this file) for consistency
+- NEVER import from app.core.config directly
+- If adding new settings, add them HERE first
+- See docs/architecture/config-policy.md for full policy
+
+TODO: Consider merging these files to prevent future drift.
+"""
 from pydantic_settings import BaseSettings
 from pydantic import Field, validator
 from functools import lru_cache

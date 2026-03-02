@@ -1,3 +1,15 @@
+"""
+app/core/config.py - Legacy configuration (DEPRECATED)
+
+⚠️ CONFIG DRIFT WARNING:
+This file is maintained for backward compatibility only.
+- ALWAYS import from app.config for new code
+- NEVER add new settings here
+- This file will be removed in a future refactor
+- See docs/architecture/config-policy.md for full policy
+
+TODO: Migrate all imports to app.config and remove this file.
+"""
 # Security-hardened configuration with SA-specific settings
 from pydantic_settings import BaseSettings
 from pydantic import Field, validator
