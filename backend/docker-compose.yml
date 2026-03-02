@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: delivery-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - MONGODB_URL=mongodb://mongo:27017/delivery_app
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - INSTANCE_ID=${INSTANCE_ID:-backend-1}
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - delivery-network
+    volumes:
+      - ./logs:/app/logs
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: delivery-celery
+    restart: unless-stopped
+    command: celery -A celery_worker.tasks worker --loglevel=info --concurrency=4
+    environment:
+      - ENVIRONMENT=production
+      - MONGODB_URL=mongodb://mongo:27017/delivery_app
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - delivery-network
+
+  # Celery Beat (Scheduler)
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: delivery-celery-beat
+    restart: unless-stopped
+    command: celery -A celery_worker.tasks beat --loglevel=info
+    environment:
+      - ENVIRONMENT=production
+      - MONGODB_URL=mongodb://mongo:27017/delivery_app
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - delivery-network
+
+  # MongoDB
+  mongo:
+    image: mongo:7.0
+    container_name: delivery-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-changeme}
+    volumes:
+      - mongo-data:/data/db
+      - ./scripts/backup:/backup
+    networks:
+      - delivery-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: delivery-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - delivery-network
+
+  # Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: delivery-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - backend
+    networks:
+      - delivery-network
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  delivery-network:
+    driver: bridge
