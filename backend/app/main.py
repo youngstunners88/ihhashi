@@ -2,6 +2,9 @@ from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from contextlib import asynccontextmanager
+from typing import Optional
+import asyncio
+import json as _json
 import sentry_sdk
 import logging
 
@@ -25,10 +28,75 @@ from app.database import (
     health_check as db_health_check,
 )
 from app.database import database
-from app.core.redis_client import init_redis, close_redis
+from app.core.redis_client import init_redis, close_redis, RedisClient, PubSubManager
+from app.routes.websocket import manager as ws_manager, INSTANCE_ID as WS_INSTANCE_ID
 from app.middleware.rate_limit import setup_rate_limiting
 
 logger = logging.getLogger(__name__)
+
+# Background task reference for pub/sub consumer cleanup
+_pubsub_task: Optional[asyncio.Task] = None
+
+
+async def _pubsub_consumer():
+    """
+    Background task that subscribes to Redis pub/sub channels and
+    fans out received messages to local WebSocket connections.
+    This enables multi-instance WebSocket broadcasting.
+    """
+    pubsub = None
+    try:
+        client = await RedisClient.get_client()
+        pubsub = client.pubsub()
+        await pubsub.subscribe(
+            PubSubManager.CHANNEL_ORDER_UPDATES,
+            PubSubManager.CHANNEL_RIDER_UPDATES,
+            PubSubManager.CHANNEL_USER_NOTIFICATIONS,
+        )
+        logger.info("Redis pub/sub consumer listening")
+
+        async for message in pubsub.listen():
+            if message["type"] != "message":
+                continue
+
+            try:
+                data = _json.loads(message["data"])
+
+                # Skip messages published by this instance (deduplication)
+                if data.get("_origin") == WS_INSTANCE_ID:
+                    continue
+
+                channel = message["channel"]
+
+                if channel == PubSubManager.CHANNEL_ORDER_UPDATES:
+                    order_id = data.get("order_id")
+                    if order_id:
+                        await ws_manager.broadcast_order_update(
+                            order_id, data.get("data", {})
+                        )
+                elif channel == PubSubManager.CHANNEL_RIDER_UPDATES:
+                    rider_id = data.get("rider_id")
+                    if rider_id:
+                        await ws_manager.send_to_rider(rider_id, data)
+                elif channel == PubSubManager.CHANNEL_USER_NOTIFICATIONS:
+                    user_id = data.get("user_id")
+                    if user_id:
+                        await ws_manager.send_to_user(user_id, data)
+            except Exception as e:
+                logger.warning(f"Error processing pub/sub message: {e}")
+
+    except asyncio.CancelledError:
+        logger.info("Redis pub/sub consumer cancelled")
+    except Exception as e:
+        logger.error(f"Redis pub/sub consumer error: {e}")
+    finally:
+        if pubsub:
+            try:
+                await pubsub.unsubscribe()
+                await pubsub.close()
+            except Exception:
+                pass
+
 
 # Initialize GlitchTip (Sentry-compatible)
 if settings.glitchtip_dsn:
@@ -60,14 +128,32 @@ async def lifespan(app: FastAPI):
         logger.info("Redis connected")
     except Exception as e:
         logger.warning(f"Redis connection failed (caching disabled): {e}")
-    
+
+    # Start Redis pub/sub consumer for multi-instance WebSocket fan-out
+    global _pubsub_task
+    try:
+        _pubsub_task = asyncio.create_task(_pubsub_consumer())
+        logger.info("Redis pub/sub consumer task started")
+    except Exception as e:
+        logger.warning(f"Failed to start pub/sub consumer: {e}")
+
     logger.info("iHhashi API startup complete")
     
     yield
     
     # Shutdown
     logger.info("Shutting down iHhashi API...")
-    
+
+    # Stop pub/sub consumer
+    global _pubsub_task
+    if _pubsub_task and not _pubsub_task.done():
+        _pubsub_task.cancel()
+        try:
+            await _pubsub_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Redis pub/sub consumer stopped")
+
     # Close Redis connection
     try:
         await close_redis()

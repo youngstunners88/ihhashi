@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     mongodb_max_pool_size: int = 100
     mongodb_min_pool_size: int = 10
     mongodb_timeout_ms: int = 30000
+    mongodb_connect_timeout_ms: int = 5000
+    mongodb_socket_timeout_ms: int = 30000
     
     # Security - MUST be set in production
     secret_key: str = Field(default="", env="SECRET_KEY")

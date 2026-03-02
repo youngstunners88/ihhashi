@@ -5,8 +5,17 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
  * Single source of truth - VITE_API_URL
  */
 const getBaseURL = (): string => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-  // Ensure consistent URL format
+  const baseUrl = import.meta.env.VITE_API_URL;
+  if (!baseUrl) {
+    if (import.meta.env.PROD) {
+      console.error(
+        '[iHhashi] VITE_API_URL is not set in production build! ' +
+        'API calls will fail. Set VITE_API_URL in your build environment.'
+      );
+    }
+    const fallback = 'http://localhost:8000';
+    return fallback.endsWith('/api/v1') ? fallback : `${fallback}/api/v1`;
+  }
   return baseUrl.endsWith('/api/v1') ? baseUrl : `${baseUrl}/api/v1`;
 };
 

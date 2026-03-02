@@ -9,9 +9,14 @@ import json
 import asyncio
 import jwt
 import math
+import uuid
 
 from app.database import get_collection
 from app.core.config import settings
+from app.core.redis_client import PubSubManager
+
+# Unique ID for this backend instance — used to deduplicate pub/sub messages
+INSTANCE_ID = str(uuid.uuid4())
 
 router = APIRouter()
 
@@ -468,7 +473,8 @@ async def user_websocket(
 # Helper function to broadcast order updates from other parts of the app
 async def notify_order_update(order_id: str, update_type: str, data: dict):
     """
-    Call this from other routes to notify connected clients of order updates
+    Call this from other routes to notify connected clients of order updates.
+    Publishes to Redis so all backend instances receive the update.
     """
     message = {
         "type": update_type,
@@ -476,25 +482,51 @@ async def notify_order_update(order_id: str, update_type: str, data: dict):
         **data
     }
     await manager.broadcast_order_update(order_id, message)
+    try:
+        await PubSubManager.broadcast_order_update(
+            order_id, update_type, {**data, "_origin": INSTANCE_ID}
+        )
+    except Exception:
+        pass  # Redis failure should not break local notifications
 
 
 async def notify_rider(rider_id: str, notification_type: str, data: dict):
     """
-    Send notification to a rider
+    Send notification to a rider.
+    Publishes to Redis so all backend instances can deliver it.
     """
-    await manager.send_to_rider(rider_id, {
+    message = {
         "type": notification_type,
+        "rider_id": rider_id,
         "timestamp": datetime.utcnow().isoformat(),
         **data
-    })
+    }
+    await manager.send_to_rider(rider_id, message)
+    try:
+        await PubSubManager.publish(
+            PubSubManager.CHANNEL_RIDER_UPDATES,
+            {**message, "_origin": INSTANCE_ID}
+        )
+    except Exception:
+        pass
 
 
 async def notify_user(user_id: str, notification_type: str, data: dict):
     """
-    Send notification to a user
+    Send notification to a user.
+    Publishes to Redis so all backend instances can deliver it.
     """
-    await manager.send_to_user(user_id, {
+    message = {
         "type": notification_type,
+        "user_id": user_id,
         "timestamp": datetime.utcnow().isoformat(),
         **data
-    })
+    }
+    await manager.send_to_user(user_id, message)
+    try:
+        await PubSubManager.publish(
+            PubSubManager.CHANNEL_USER_NOTIFICATIONS,
+            {**message, "_origin": INSTANCE_ID}
+        )
+    except Exception:
+        pass

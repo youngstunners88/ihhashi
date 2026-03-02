@@ -48,13 +48,13 @@ async def connect_db():
         
         client = AsyncIOMotorClient(
             settings.mongodb_url,
-            maxPoolSize=100,
-            minPoolSize=10,
-            maxIdleTimeMS=30000,        # 30 seconds
-            waitQueueTimeoutMS=5000,    # 5 seconds
-            connectTimeoutMS=5000,      # 5 seconds
-            socketTimeoutMS=30000,      # 30 seconds
-            serverSelectionTimeoutMS=5000,  # 5 seconds
+            maxPoolSize=settings.mongodb_max_pool_size,
+            minPoolSize=settings.mongodb_min_pool_size,
+            maxIdleTimeMS=settings.mongodb_timeout_ms,
+            waitQueueTimeoutMS=settings.mongodb_connect_timeout_ms,
+            connectTimeoutMS=settings.mongodb_connect_timeout_ms,
+            socketTimeoutMS=settings.mongodb_socket_timeout_ms,
+            serverSelectionTimeoutMS=settings.mongodb_connect_timeout_ms,
             retryWrites=True,
             retryReads=True,
             driver=DriverInfo(name="iHhashi", version="0.3.0"),
@@ -68,7 +68,11 @@ async def connect_db():
         
         # Log pool stats in debug mode
         if settings.debug:
-            logger.debug(f"MongoDB connection pool initialized with maxPoolSize=100")
+            logger.debug(
+                f"MongoDB connection pool initialized with "
+                f"maxPoolSize={settings.mongodb_max_pool_size}, "
+                f"minPoolSize={settings.mongodb_min_pool_size}"
+            )
         
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
@@ -195,8 +199,8 @@ async def get_pool_stats() -> dict:
         return {
             "status": "initialized",
             "database": settings.db_name,
-            "configured_max_pool_size": 100,
-            "configured_min_pool_size": 10,
+            "configured_max_pool_size": settings.mongodb_max_pool_size,
+            "configured_min_pool_size": settings.mongodb_min_pool_size,
         }
     except Exception as e:
         return {

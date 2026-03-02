@@ -117,3 +117,14 @@ apksigner sign --ks ihhashi.keystore --out ihhashi-release-signed.apk ihhashi-re
 3. **Upload signed APK** (`ihhashi-release-signed.apk`)
 4. **Complete store listing details**
 5. **Submit for review**
+
+## Go-Live Audit Checklist
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Production API URL set in build | Pending | `VITE_API_URL` must be set; localhost fallback now warns in prod |
+| Release signing config in build.gradle | Pending | Template added; needs actual keystore + env vars |
+| Privacy policy URL consistency | Pending | `kofi.zo.space/privacy-policy` linked in Auth.tsx; verify it loads |
+| Crash reporting DSN per environment | Pending | `.env.example` updated with guidance; set actual DSNs |
+| Food-first UI consistency review | Pending | Manual review: verify home screen prioritizes food categories |
+| Sentry/GlitchTip integration test | Pending | Trigger a test error in staging and verify it appears in dashboard |

@@ -2,7 +2,7 @@ name: iHhashi CI/CD
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'feature/**', 'fix/**', 'release/**']
   pull_request:
     branches: [main, develop]
 
@@ -147,8 +147,8 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
             cd /opt/ihhashi
-            docker-compose pull
-            docker-compose up -d --remove-orphans
+            docker compose -f deployment/docker-compose.prod.yml pull
+            docker compose -f deployment/docker-compose.prod.yml up -d --scale backend=3 --remove-orphans
             docker system prune -f
 
   # Security scan
@@ -163,6 +163,6 @@ jobs:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'table'
-          exit-code: '0'
+          exit-code: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && '1' || '0' }}
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
