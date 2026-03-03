@@ -78,6 +78,9 @@ services:
   # ============================================
   # Backend API
   # ============================================
+  # Scale: docker compose -f deployment/docker-compose.prod.yml up -d --scale backend=3
+  # container_name is intentionally omitted to allow scaling.
+  # Nginx load-balances across instances via Docker DNS + least_conn.
   backend:
     build:
       context: ../backend
@@ -85,10 +88,9 @@ services:
       args:
         - ENVIRONMENT=production
     image: ihhashi-backend:latest
-    container_name: ihhashi-backend-prod
     restart: always
-    ports:
-      - "127.0.0.1:8000:8000"
+    expose:
+      - "8000"
     environment:
       - ENVIRONMENT=production
       - DEBUG=false

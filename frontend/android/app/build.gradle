@@ -16,10 +16,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // TODO: Configure release signing before Play Store submission.
+    // NEVER commit the actual keystore file or passwords to version control.
+    //
+    // signingConfigs {
+    //     release {
+    //         storeFile file("ihhashi-release.keystore")
+    //         storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+    //         keyAlias "ihhashi"
+    //         keyPassword System.getenv("KEY_PASSWORD") ?: ""
+    //     }
+    // }
     buildTypes {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // TODO: Uncomment when signingConfigs is configured above
+            // signingConfig signingConfigs.release
         }
     }
 }
