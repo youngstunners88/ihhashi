@@ -1,0 +1,24 @@
+{
+  "name": "orchestrator",
+  "description": "Manage parallel AI coding agents via ComposioHQ agent-orchestrator. Spawn, monitor, and coordinate autonomous agents in isolated git worktrees.",
+  "version": "1.0.0",
+  "author": "iHhashi",
+  "dependencies": {
+    "agent-orchestrator": "../../plugins/agent-orchestrator",
+    "persistent-agent-memory": "../../plugins/persistent-agent-memory"
+  },
+  "commands": {
+    "spawn": "Spawn a new agent on a GitHub issue or task",
+    "status": "Check status of all running agents",
+    "send": "Send instructions to a running agent",
+    "kill": "Terminate a running agent session",
+    "dashboard": "Launch the web dashboard",
+    "init": "Initialize orchestrator for current project"
+  },
+  "config": {
+    "ao_path": "../../plugins/agent-orchestrator",
+    "default_runtime": "tmux",
+    "default_agent": "claude-code",
+    "max_parallel_agents": 5
+  }
+}

@@ -126,6 +126,16 @@ Delivery platform for South Africa, inspired by Ele.me.
 - `docs/TERMS_OF_SERVICE.md` - Full ToS with rules
 - `backend/.env.example` - Environment template
 
+### Plugins (installed)
+- `plugins/agent-orchestrator/` - ComposioHQ agent-orchestrator (parallel AI agents in git worktrees)
+- `plugins/persistent-agent-memory/` - Persistent agent memory (stateful agents with SQLite + shared brain)
+
+### Skills
+- `skills/orchestrator/` - Agent fleet management skill (spawn, monitor, coordinate)
+- `skills/qwen-tentacles/` - Qwen 3.5 multi-model AI tentacles (code-review, architect, translate, vision, research, classify, summarize)
+- `skills/persistent-memory/` - Agent state management skill (boot, write, knowledge, handoff, query)
+- `skills/autonomous-ops/` - Master autonomous operations skill (issue-swarm, review-pipeline, sa-translate, ops-cycle, market-intel, deploy-guard, full-auto)
+
 ---
 
 ## Play Store Preparation (2026-02-26)
@@ -315,3 +325,98 @@ View issues: https://github.com/youngstunners88/ihhashi/issues?q=is:issue+is:ope
 - Budget shifts capped at 20%/day
 - All actions logged with timestamps
 - Telegram approval for major changes
+
+---
+
+## PLUGINS & SKILLS ECOSYSTEM
+
+### Agent Orchestrator (ComposioHQ)
+Parallel AI coding agent management. Each agent runs in an isolated git worktree with its own feature branch.
+
+**Location**: `plugins/agent-orchestrator/`
+**Skill**: `skills/orchestrator/`
+
+```bash
+# Initialize for iHhashi
+python3 skills/orchestrator/scripts/orchestrate.py init
+
+# Spawn agent on an issue
+python3 skills/orchestrator/scripts/orchestrate.py spawn 42
+
+# Auto-assign multiple issues
+python3 skills/orchestrator/scripts/orchestrate.py auto 10 11 12
+
+# Check status
+python3 skills/orchestrator/scripts/orchestrate.py status
+```
+
+### Qwen 3.5 Tentacles (Multi-Model AI)
+7 specialized tentacles, each using the optimal Qwen 3.5 model size.
+
+**Location**: `skills/qwen-tentacles/`
+
+| Tentacle | Model | Active Params | Use |
+|----------|-------|---------------|-----|
+| architect | Qwen3.5-397B-A17B | 17B | Architecture decisions |
+| research | Qwen3.5-397B-A17B | 17B | Deep research |
+| code-review | Qwen3.5-122B-A10B | 10B | Code analysis |
+| translate | Qwen3.5-35B-A3B | 3B | SA language translation |
+| vision | Qwen3.5-27B | 27B | Image/screenshot analysis |
+| summarize | Qwen3.5-27B | 27B | Document summarization |
+| classify | Qwen3.5-9B | 9B | Fast classification |
+
+```bash
+# Code review
+python3 skills/qwen-tentacles/scripts/tentacles.py code-review backend/app/main.py
+
+# Auto-select best tentacle
+python3 skills/qwen-tentacles/scripts/tentacles.py auto "analyze competitor pricing"
+
+# Translate to Zulu
+python3 skills/qwen-tentacles/scripts/tentacles.py translate "Order your food" --lang zu
+```
+
+### Persistent Agent Memory
+File-based persistent memory for stateful agents. Proactive context injection at boot.
+
+**Location**: `plugins/persistent-agent-memory/`
+**Skill**: `skills/persistent-memory/`
+
+```bash
+# Boot agent with context
+python3 skills/persistent-memory/scripts/memory.py boot ihhashi-ops
+
+# Write memory
+python3 skills/persistent-memory/scripts/memory.py write ihhashi-ops "Deployed v0.5"
+
+# Cross-agent handoff
+python3 skills/persistent-memory/scripts/memory.py handoff orchestrator qwen-tentacle "Review PR #42"
+
+# Database health
+python3 skills/persistent-memory/scripts/memory.py status
+```
+
+### Autonomous Ops (Master Skill)
+Combines all three systems into unified autonomous workflows.
+
+**Location**: `skills/autonomous-ops/`
+
+```bash
+# Full autonomous cycle
+python3 skills/autonomous-ops/scripts/autonomous.py full-auto
+
+# Issue swarm (parallel agents)
+python3 skills/autonomous-ops/scripts/autonomous.py issue-swarm 10 11 12
+
+# Code review pipeline (multi-model)
+python3 skills/autonomous-ops/scripts/autonomous.py review-pipeline backend/app/main.py
+
+# Translate to all SA languages
+python3 skills/autonomous-ops/scripts/autonomous.py sa-translate "Welcome to iHhashi"
+
+# Pre-deployment validation
+python3 skills/autonomous-ops/scripts/autonomous.py deploy-guard
+
+# System status
+python3 skills/autonomous-ops/scripts/autonomous.py status
+```

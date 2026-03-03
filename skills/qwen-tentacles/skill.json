@@ -1,0 +1,52 @@
+{
+  "name": "qwen-tentacles",
+  "description": "Multi-model AI tentacles powered by Qwen 3.5 models. Provides specialized sub-agents for code review, analysis, translation, vision tasks, and autonomous research using various Qwen 3.5 model sizes.",
+  "version": "1.0.0",
+  "author": "iHhashi",
+  "models": {
+    "flagship": {
+      "id": "Qwen/Qwen3.5-397B-A17B",
+      "params": "397B (17B active)",
+      "use": "Complex reasoning, architecture decisions, code generation"
+    },
+    "large": {
+      "id": "Qwen/Qwen3.5-122B-A10B",
+      "params": "122B (10B active)",
+      "use": "Code review, detailed analysis, multi-step planning"
+    },
+    "medium": {
+      "id": "Qwen/Qwen3.5-35B-A3B",
+      "params": "35B (3B active)",
+      "use": "Code completion, translation, standard tasks"
+    },
+    "standard": {
+      "id": "Qwen/Qwen3.5-27B",
+      "params": "27B",
+      "use": "General purpose, chat, content generation"
+    },
+    "efficient": {
+      "id": "Qwen/Qwen3.5-9B",
+      "params": "9B",
+      "use": "Fast inference, embeddings, classification"
+    },
+    "compact": {
+      "id": "Qwen/Qwen3.5-4B",
+      "params": "4B",
+      "use": "Edge deployment, quick lookups, filtering"
+    },
+    "tiny": {
+      "id": "Qwen/Qwen3.5-0.8B",
+      "params": "0.8B",
+      "use": "On-device, real-time, keyword extraction"
+    }
+  },
+  "tentacles": {
+    "code-review": "Review code changes with large model",
+    "architect": "Design system architecture with flagship model",
+    "translate": "Translate content to SA languages with medium model",
+    "vision": "Analyze images/screenshots with any model (multimodal)",
+    "research": "Deep research with flagship model",
+    "classify": "Fast classification with efficient model",
+    "summarize": "Summarize documents with standard model"
+  }
+}

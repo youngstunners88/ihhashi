@@ -1,0 +1,30 @@
+{
+  "name": "persistent-memory",
+  "description": "Persistent agent memory system for iHhashi. Agents compound knowledge instead of resetting. Provides proactive context injection, cross-agent communication, and structured knowledge storage.",
+  "version": "1.0.0",
+  "author": "iHhashi",
+  "dependencies": {
+    "persistent-agent-memory": "../../plugins/persistent-agent-memory"
+  },
+  "databases": {
+    "knowledge": "Semantic knowledge chunks with tags and source tracking",
+    "crm": "Contact and interaction tracking across channels",
+    "social_analytics": "Post performance and social media metrics",
+    "llm_usage": "Per-agent token and cost tracking",
+    "agent_runs": "Execution history for scheduled and ad-hoc jobs"
+  },
+  "agents": {
+    "orchestrator": "Agent fleet coordinator",
+    "qwen-tentacle": "Multi-model AI sub-agent",
+    "ihhashi-ops": "Platform operations agent",
+    "memory-manager": "Memory system maintenance agent"
+  },
+  "commands": {
+    "boot": "Boot an agent with proactive context injection",
+    "write": "Write a memory entry for an agent",
+    "knowledge": "Log a knowledge chunk",
+    "status": "Check health of all databases",
+    "handoff": "Create cross-agent handoff",
+    "query": "Query knowledge base by tags"
+  }
+}
