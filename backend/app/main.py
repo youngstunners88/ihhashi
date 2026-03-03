@@ -21,8 +21,8 @@ from app.database import (
     close_db, 
     ensure_indexes,
     health_check as db_health_check,
+    database,
 )
-from app.database import database
 from app.core.redis_client import init_redis, close_redis
 from app.middleware.rate_limit import setup_rate_limiting
 
