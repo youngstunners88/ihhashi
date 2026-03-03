@@ -90,3 +90,10 @@ frontend/android/build/
 *.xcworkspace
 *.xcuserdata
 Pods/
+
+# Plugins - track configs, not heavy dependencies
+plugins/agent-orchestrator/node_modules/
+plugins/agent-orchestrator/packages/*/dist/
+plugins/agent-orchestrator/packages/*/node_modules/
+plugins/agent-orchestrator/.husky/
+plugins/persistent-agent-memory/data/*.db

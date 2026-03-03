@@ -1,0 +1,26 @@
+{
+  "name": "autonomous-ops",
+  "description": "Master autonomous operations skill for iHhashi. Combines agent-orchestrator (parallel agents), Qwen 3.5 tentacles (multi-model AI), and persistent-agent-memory (stateful agents) into a unified autonomous system.",
+  "version": "1.0.0",
+  "author": "iHhashi",
+  "integrations": {
+    "orchestrator": "../orchestrator",
+    "qwen-tentacles": "../qwen-tentacles",
+    "persistent-memory": "../persistent-memory"
+  },
+  "workflows": {
+    "issue-swarm": "Automatically assign GitHub issues to parallel agents with Qwen-powered triage",
+    "review-pipeline": "Code review pipeline: classify -> review -> architect feedback",
+    "sa-translate": "Batch translate app content to all SA languages",
+    "ops-cycle": "Full operational cycle: boot agents, check state, execute, log, handoff",
+    "market-intel": "Research SA food delivery market with flagship Qwen model",
+    "deploy-guard": "Pre-deployment checks: code review + architecture validation"
+  },
+  "strategy": {
+    "model_selection": "Automatically select optimal Qwen 3.5 model size per task",
+    "agent_isolation": "Each agent runs in its own git worktree via agent-orchestrator",
+    "memory_persistence": "All agent activity logged to persistent-agent-memory",
+    "cross_agent_comms": "Agents communicate via shared-brain JSON files",
+    "boot_injection": "Agents receive prior context at startup (~1,375 tokens)"
+  }
+}
