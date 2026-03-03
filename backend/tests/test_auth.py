@@ -18,6 +18,9 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+# Import test constants
+from conftest import TEST_PASSWORD
+
 from app.services.auth import (
     verify_password, get_password_hash, create_access_token,
     authenticate_user, get_current_user
@@ -32,7 +35,7 @@ class TestPasswordHashing:
     
     def test_password_hash_creates_different_hashes(self):
         """Verify same password produces different hashes (salt)."""
-        password = "testpassword123"
+        password = TEST_PASSWORD
         hash1 = get_password_hash(password)
         hash2 = get_password_hash(password)
         
@@ -42,21 +45,21 @@ class TestPasswordHashing:
     
     def test_verify_password_correct(self):
         """Verify correct password validates."""
-        password = "testpassword123"
+        password = TEST_PASSWORD
         hashed = get_password_hash(password)
         
         assert verify_password(password, hashed) is True
     
     def test_verify_password_incorrect(self):
         """Verify incorrect password fails."""
-        password = "testpassword123"
+        password = TEST_PASSWORD
         hashed = get_password_hash(password)
         
         assert verify_password("wrongpassword", hashed) is False
     
     def test_verify_password_empty(self):
         """Verify empty password fails."""
-        password = "testpassword123"
+        password = TEST_PASSWORD
         hashed = get_password_hash(password)
         
         assert verify_password("", hashed) is False
@@ -241,7 +244,7 @@ class TestLogin:
             "/api/auth/login",
             data={
                 "username": test_user["email"],
-                "password": "testpassword123"
+                "password": TEST_PASSWORD
             }
         )
         
@@ -289,7 +292,7 @@ class TestLogin:
             "email": "inactive@test.com",
             "phone": "+27823333333",
             "full_name": "Inactive User",
-            "hashed_password": get_password_hash("testpassword123"),
+            "hashed_password": get_password_hash(TEST_PASSWORD),
             "role": UserRole.BUYER,
             "is_active": False,
             "created_at": datetime.utcnow()
@@ -300,7 +303,7 @@ class TestLogin:
             "/api/auth/login",
             data={
                 "username": "inactive@test.com",
-                "password": "testpassword123"
+                "password": TEST_PASSWORD
             }
         )
         
@@ -486,7 +489,7 @@ class TestAuthenticateUser:
     @pytest.mark.asyncio
     async def test_authenticate_user_success(self, test_user):
         """Test successful user authentication."""
-        user = await authenticate_user(test_user["email"], "testpassword123")
+        user = await authenticate_user(test_user["email"], TEST_PASSWORD)
         
         assert user is not None
         assert user.email == test_user["email"]

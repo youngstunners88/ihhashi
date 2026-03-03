@@ -24,6 +24,11 @@ os.environ["DB_NAME"] = "ihhashi_test"
 os.environ["SECRET_KEY"] = "test_secret_key_for_testing_only"
 os.environ["PAYSTACK_SECRET_KEY"] = "sk_test_dummy_key"
 
+# =============================================================================
+# TEST CONSTANTS - Centralized test credentials (NOT for production use)
+# =============================================================================
+TEST_PASSWORD = "testpassword123"  # Used only in test suite - can be rotated
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -118,7 +123,7 @@ async def test_user(clean_db) -> dict:
         "email": "buyer@test.com",
         "phone": "+27821234567",
         "full_name": "Test Buyer",
-        "hashed_password": get_password_hash("testpassword123"),
+        "hashed_password": get_password_hash(TEST_PASSWORD),
         "role": UserRole.BUYER,
         "is_active": True,
         "created_at": datetime.utcnow(),
@@ -138,7 +143,7 @@ async def test_merchant(clean_db) -> dict:
         "email": "merchant@test.com",
         "phone": "+27821234568",
         "full_name": "Test Merchant",
-        "hashed_password": get_password_hash("testpassword123"),
+        "hashed_password": get_password_hash(TEST_PASSWORD),
         "role": UserRole.MERCHANT,
         "is_active": True,
         "created_at": datetime.utcnow(),
@@ -160,7 +165,7 @@ async def test_driver(clean_db) -> dict:
         "email": "driver@test.com",
         "phone": "+27821234569",
         "full_name": "Test Driver",
-        "hashed_password": get_password_hash("testpassword123"),
+        "hashed_password": get_password_hash(TEST_PASSWORD),
         "role": UserRole.DRIVER,
         "is_active": True,
         "created_at": datetime.utcnow(),
@@ -206,7 +211,7 @@ async def test_admin(clean_db) -> dict:
         "email": "admin@test.com",
         "phone": "+27821234570",
         "full_name": "Test Admin",
-        "hashed_password": get_password_hash("testpassword123"),
+        "hashed_password": get_password_hash(TEST_PASSWORD),
         "role": UserRole.ADMIN,
         "is_active": True,
         "created_at": datetime.utcnow(),
@@ -521,7 +526,7 @@ async def create_test_user_direct(
         "email": email,
         "phone": phone,
         "full_name": f"Test {role.value}",
-        "hashed_password": get_password_hash("testpassword123"),
+        "hashed_password": get_password_hash(TEST_PASSWORD),
         "role": role,
         "is_active": True,
         "created_at": datetime.utcnow(),
