@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft, MapPin, CreditCard, HelpCircle, LogOut } from 'lucide-react'
+import { ArrowLeft, MapPin, CreditCard, HelpCircle, LogOut, Shield, FileText } from 'lucide-react'
 
 export default function Profile() {
   return (
@@ -57,6 +57,14 @@ export default function Profile() {
           <HelpCircle className="w-5 h-5 text-gray-400" />
           <span className="flex-1">Help & Support</span>
         </Link>
+        <a href="https://ihhashi.co.za/privacy-policy" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100">
+          <Shield className="w-5 h-5 text-gray-400" />
+          <span className="flex-1">Privacy Policy</span>
+        </a>
+        <a href="https://ihhashi.co.za/terms" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100">
+          <FileText className="w-5 h-5 text-gray-400" />
+          <span className="flex-1">Terms of Service</span>
+        </a>
         <button className="flex items-center gap-3 px-4 py-3.5 w-full text-left text-red-500">
           <LogOut className="w-5 h-5" />
           <span>Sign Out</span>

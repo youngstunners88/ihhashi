@@ -129,7 +129,7 @@ class ConnectionManager:
                         safe_message.pop("recipient_phone", None)
                         safe_message.pop("delivery_instructions", None)
                     await connection.send_json(safe_message)
-                except:
+                except Exception:
                     dead_connections.append(connection)
             
             # Clean up dead connections
@@ -143,7 +143,7 @@ class ConnectionManager:
         if rider_id in self.rider_connections:
             try:
                 await self.rider_connections[rider_id].send_json(message)
-            except:
+            except Exception:
                 del self.rider_connections[rider_id]
     
     async def send_to_user(self, user_id: str, message: dict):
@@ -151,7 +151,7 @@ class ConnectionManager:
         if user_id in self.user_connections:
             try:
                 await self.user_connections[user_id].send_json(message)
-            except:
+            except Exception:
                 del self.user_connections[user_id]
 
 
@@ -211,9 +211,11 @@ async def track_order_websocket(
     order = None
     
     try:
+        from bson import ObjectId
+        order = await orders_col.find_one({"_id": ObjectId(order_id)})
+    except Exception:
+        # Fallback to string id field
         order = await orders_col.find_one({"id": order_id})
-    except:
-        pass
     
     if not order:
         await websocket.close(code=4004, reason="Order not found")
@@ -282,7 +284,7 @@ async def track_order_websocket(
                 # Send heartbeat
                 try:
                     await websocket.send_json({"type": "heartbeat"})
-                except:
+                except Exception:
                     break
     
     except WebSocketDisconnect:
@@ -394,7 +396,7 @@ async def rider_websocket(
             except asyncio.TimeoutError:
                 try:
                     await websocket.send_json({"type": "heartbeat"})
-                except:
+                except Exception:
                     break
     
     except WebSocketDisconnect:
@@ -456,7 +458,7 @@ async def user_websocket(
             except asyncio.TimeoutError:
                 try:
                     await websocket.send_json({"type": "heartbeat"})
-                except:
+                except Exception:
                     break
     
     except WebSocketDisconnect:

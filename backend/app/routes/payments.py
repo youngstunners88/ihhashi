@@ -112,10 +112,13 @@ async def initialize_payment(
     ALLOWED_CALLBACK_DOMAINS = [
         "ihhashi.app", "www.ihhashi.app", "localhost", "127.0.0.1"
     ]
+    ALLOWED_SCHEMES = ["https", "http"]
     requested_cb = payment.callback_url
     if requested_cb:
         from urllib.parse import urlparse
         parsed = urlparse(requested_cb)
+        if parsed.scheme not in ALLOWED_SCHEMES:
+            raise HTTPException(status_code=400, detail="Invalid callback URL scheme")
         if parsed.hostname not in ALLOWED_CALLBACK_DOMAINS:
             raise HTTPException(status_code=400, detail="Invalid callback URL domain")
         callback_url = requested_cb
@@ -515,8 +518,13 @@ async def paystack_webhook(request: Request):
                 )
                 return {"status": "verification_failed"}
         except Exception as e:
-            # Log but continue - webhook signature was valid
+            # Verification failed - do NOT proceed with marking payment as success
             logger.error(f"Payment verification failed for {reference}: {e}")
+            await webhooks_col.update_one(
+                {"event_id": event_id},
+                {"$set": {"processed": True, "verification_error": str(e)}}
+            )
+            return {"status": "verification_error", "message": "Could not verify payment"}
         
         # Update payment record
         await payments_col.update_one(

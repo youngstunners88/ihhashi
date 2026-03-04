@@ -35,9 +35,14 @@ def sanitize_notes(notes: Optional[str]) -> Optional[str]:
     """Sanitize buyer notes - strip HTML and limit length"""
     if not notes:
         return None
-    # Strip potential HTML tags (basic sanitization)
     import re
-    clean = re.sub(r'<[^>]+>', '', notes)
+    import html
+    # Decode HTML entities first to catch encoded tags like &lt;script&gt;
+    decoded = html.unescape(notes)
+    # Strip HTML tags
+    clean = re.sub(r'<[^>]*>', '', decoded)
+    # Remove any remaining HTML entities
+    clean = html.escape(clean)
     return clean[:MAX_NOTES_LENGTH].strip()
 
 

@@ -3,7 +3,7 @@ Nduna Chatbot - Multilingual AI Assistant for iHhashi
 Supports all 6 South African languages with Groq LLM
 Now with Product Browsing and Voice Input!
 """
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import httpx
@@ -13,6 +13,7 @@ from datetime import datetime
 from bson import ObjectId
 
 from app.database import get_collection
+from app.middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/nduna", tags=["nduna"])
 
@@ -233,20 +234,22 @@ class BrowseResponse(BaseModel):
 
 async def search_merchants_impl(query: str, category: str = None, city: str = None, lat: float = None, lng: float = None) -> Dict:
     """Search merchants in database"""
+    import re as re_module
     stores_col = get_collection("stores")
-    
+
     search_query = {"status": "active"}
-    
+
     if category:
         search_query["category"] = category
-    
+
     if city:
-        search_query["city"] = {"$regex": city, "$options": "i"}
-    
+        search_query["city"] = {"$regex": re_module.escape(city), "$options": "i"}
+
     if query:
+        escaped_query = re_module.escape(query)
         search_query["$or"] = [
-            {"name": {"$regex": query, "$options": "i"}},
-            {"description": {"$regex": query, "$options": "i"}}
+            {"name": {"$regex": escaped_query, "$options": "i"}},
+            {"description": {"$regex": escaped_query, "$options": "i"}}
         ]
     
     cursor = stores_col.find(search_query).limit(10)
@@ -269,17 +272,19 @@ async def search_merchants_impl(query: str, category: str = None, city: str = No
 
 async def search_products_impl(query: str, merchant_id: str = None) -> Dict:
     """Search products in database"""
+    import re as re_module
     products_col = get_collection("products")
-    
+
     search_query = {"is_available": True}
-    
+
     if merchant_id:
         search_query["store_id"] = merchant_id
-    
+
     if query:
+        escaped_query = re_module.escape(query)
         search_query["$or"] = [
-            {"name": {"$regex": query, "$options": "i"}},
-            {"description": {"$regex": query, "$options": "i"}}
+            {"name": {"$regex": escaped_query, "$options": "i"}},
+            {"description": {"$regex": escaped_query, "$options": "i"}}
         ]
     
     cursor = products_col.find(search_query).limit(20)
@@ -356,7 +361,8 @@ async def get_supported_languages():
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(chat_message: ChatMessage):
+@limiter.limit("30/minute")
+async def chat(request: Request, chat_message: ChatMessage):
     """
     Chat with Nduna AI assistant with function calling support
     
@@ -470,7 +476,9 @@ async def chat(chat_message: ChatMessage):
         except httpx.TimeoutException:
             raise HTTPException(status_code=504, detail="Request timeout")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            import logging
+            logging.getLogger(__name__).error(f"Nduna chat error: {e}")
+            raise HTTPException(status_code=500, detail="An error occurred processing your request")
     
     suggestions = generate_suggestions(chat_message.message, chat_message.context)
     

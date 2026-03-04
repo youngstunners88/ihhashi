@@ -55,7 +55,8 @@ export function CartPage() {
           order_id: orderId,
         })
         const { authorization_url } = payResp.data.data
-        // Clear cart before redirect so duplicate orders aren't placed on back-navigation
+        // Store order ID so cart can be cleared after successful payment verification
+        sessionStorage.setItem('pending_payment_order', orderId)
         clearCart()
         // Redirect to Paystack payment page
         window.location.href = authorization_url

@@ -11,9 +11,9 @@ if (POSTHOG_KEY && POSTHOG_KEY !== 'your_posthog_key_here' && !POSTHOG_KEY.start
     api_host: POSTHOG_HOST,
     // Enable session recording for UX insights
     session_recording: {
-      maskAllInputs: false,
+      maskAllInputs: true,
       maskInputOptions: {
-        password: true, // Always mask password fields
+        password: true,
       },
     },
     // Capture page views automatically

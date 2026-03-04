@@ -48,18 +48,20 @@ async def get_merchants(
     """Search merchants with geolocation"""
     stores_col = get_collection("stores")
     
+    import re as re_module
     query = {"status": StoreStatus.ACTIVE.value}
-    
+
     if category:
         query["category"] = category.value
-    
+
     if city:
-        query["city"] = {"$regex": city, "$options": "i"}
-    
+        query["city"] = {"$regex": re_module.escape(city), "$options": "i"}
+
     if search:
+        escaped_search = re_module.escape(search)
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}}
+            {"name": {"$regex": escaped_search, "$options": "i"}},
+            {"description": {"$regex": escaped_search, "$options": "i"}}
         ]
     
     # Geo query if location provided

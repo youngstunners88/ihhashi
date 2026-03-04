@@ -67,6 +67,8 @@ api.interceptors.response.use(
       const hadToken = !!localStorage.getItem('access_token');
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      // Clear cart to prevent stale data after session expiry
+      localStorage.removeItem('ihhashi-cart');
 
       const currentPath = window.location.pathname;
       if (hadToken && !currentPath.startsWith('/auth')) {
