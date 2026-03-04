@@ -7,11 +7,19 @@ interface User {
   full_name: string;
 }
 
+interface RegisterData {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
 interface AuthState {
   user: User | null;
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   initializeAuth: () => Promise<void>;
 }
@@ -27,10 +35,37 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (email: string, password: string) => {
-    // API call implementation
-    const token = 'dummy-token';
-    await SecureStore.setItemAsync('token', token);
-    set({ token, user: { id: '1', email, full_name: 'User' } });
+    set({ isLoading: true });
+    try {
+      // API call implementation
+      const token = 'dummy-token';
+      await SecureStore.setItemAsync('token', token);
+      set({ token, user: { id: '1', email, full_name: 'User' }, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  register: async (data: RegisterData) => {
+    set({ isLoading: true });
+    try {
+      // API call implementation
+      const token = 'dummy-token';
+      await SecureStore.setItemAsync('token', token);
+      set({
+        token,
+        user: {
+          id: '1',
+          email: data.email,
+          full_name: data.fullName,
+        },
+        isLoading: false,
+      });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
   },
 
   logout: async () => {
