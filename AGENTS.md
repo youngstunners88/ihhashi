@@ -193,6 +193,79 @@ Delivery platform for South Africa, inspired by Ele.me.
 
 ---
 
+## 🚀 DEPLOYMENT (v0.3.1) - NEW
+
+### MongoDB Atlas (CONFIGURED)
+- **Connection**: `mongodb+srv://teacherchris37_db_user:iHhashi1!!!@cluster0.ai5z7wq.mongodb.net/ihhashi`
+- **Database**: `ihhashi`
+- **Status**: ✅ Configured in all environment files
+- **Network Access**: Must allow Railway IPs in MongoDB Atlas
+
+### Hosting Configuration
+iHhashi is now configured for deployment on Railway (backend) and Netlify (frontend).
+
+**Backend (Railway)**
+- **API Token**: `91e3ad14-e35d-490d-9fa0-361ecc59822f`
+- **Configuration**: `backend/railway.json`, `backend/railway.toml`, `backend/Procfile`
+- **Deploy Command**: `cd backend && railway up`
+- **Health Check**: `/health` endpoint
+
+**Frontend (Netlify)**
+- **Auth Token**: `nfp_skw8CN2quLP7NcwTzmsY8QXUvP6eH3CFcd8b`
+- **Configuration**: `netlify.toml`, `frontend/netlify.toml`
+- **Deploy Command**: `cd frontend && npm run build && netlify deploy --prod`
+- **Build Output**: `frontend/dist`
+
+### Deployment Scripts
+Located in `deployment/scripts/`:
+- `quick-start.sh` - Interactive deployment menu
+- `full-deploy.sh` - Automated full deployment
+- `deploy-railway.sh` - Backend-only deployment
+- `deploy-netlify.sh` - Frontend-only deployment
+- `setup-railway-env.sh` - Configure Railway environment
+- `setup-netlify-env.sh` - Configure Netlify environment
+- `configure-secrets.sh` - Set up GitHub secrets
+- `verify-deployment.sh` - Verify configuration
+
+### CI/CD Pipeline
+GitHub Actions workflow (`.github/workflows/deploy.yml`):
+- Runs tests on every push
+- Deploys backend to Railway on main/master
+- Deploys frontend to Netlify on main/master
+- Requires secrets: `RAILWAY_TOKEN`, `NETLIFY_AUTH_TOKEN`, `NETLIFY_SITE_ID`
+
+### Required Environment Variables
+
+**Railway (Backend)**:
+- `MONGODB_URL` - MongoDB connection string
+- `REDIS_URL` - Redis connection string
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_ANON_KEY` - Supabase anon key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+- `SECRET_KEY` - JWT signing key (auto-generated)
+- `CORS_ORIGINS` - Frontend URL for CORS
+
+**Netlify (Frontend)**:
+- `VITE_API_URL` - Backend API URL
+- `VITE_SUPABASE_URL` - Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` - Supabase anon key
+- `VITE_PAYSTACK_PUBLIC_KEY` - Paystack public key
+- `VITE_GOOGLE_MAPS_API_KEY` - Google Maps API key
+
+### Quick Deploy
+```bash
+# Verify configuration
+./deployment/scripts/verify-deployment.sh
+
+# Interactive deployment
+./deployment/scripts/quick-start.sh
+
+# Or full automated deployment
+./deployment/scripts/full-deploy.sh production
+```
+
+---
+
 ## 🤖 AGENT SYNCHRONIZATION
 
 ### Keeping Agents Updated
