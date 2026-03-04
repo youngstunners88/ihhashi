@@ -1,0 +1,43 @@
+{
+  "name": "@composio/agent-qwen-tentacle",
+  "version": "1.0.0",
+  "description": "Agent plugin: Qwen 3.5 Tentacles via Ollama with persistent memory",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "@composio/ao-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "peerDependencies": {
+    "@composio/ao-core": "^0.1.0"
+  },
+  "keywords": [
+    "agent-orchestrator",
+    "plugin",
+    "agent",
+    "qwen",
+    "ollama"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ComposioHQ/agent-orchestrator.git",
+    "directory": "packages/plugins/agent-qwen-tentacle"
+  }
+}
