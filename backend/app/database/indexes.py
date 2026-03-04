@@ -117,6 +117,48 @@ async def create_indexes(db: AsyncIOMotorDatabase):
     except Exception as e:
         logger.error(f"Failed to create notifications indexes: {e}")
     
+    # Route Memory collections (Phase 1)
+    try:
+        # Route segments - geospatial index for location queries
+        await db.route_segments.create_index([("start_point", "2dsphere")])
+        await db.route_segments.create_index([("end_point", "2dsphere")])
+        await db.route_segments.create_index("road_type")
+        await db.route_segments.create_index([("created_at", -1)])
+        indexes_created.append("route_segments")
+    except Exception as e:
+        logger.error(f"Failed to create route_segments indexes: {e}")
+    
+    try:
+        # Driver insights - geospatial + type queries
+        await db.driver_insights.create_index([("location", "2dsphere")])
+        await db.driver_insights.create_index("type")
+        await db.driver_insights.create_index("driver_id")
+        await db.driver_insights.create_index([("created_at", -1)])
+        await db.driver_insights.create_index("expires_at")
+        indexes_created.append("driver_insights")
+    except Exception as e:
+        logger.error(f"Failed to create driver_insights indexes: {e}")
+    
+    try:
+        # Actual time records - driver stats + time queries
+        await db.actual_time_records.create_index("driver_id")
+        await db.actual_time_records.create_index("route_id")
+        await db.actual_time_records.create_index([("driver_id", 1), ("created_at", -1)])
+        await db.actual_time_records.create_index([("time_of_day", 1), ("day_of_week", 1)])
+        indexes_created.append("actual_time_records")
+    except Exception as e:
+        logger.error(f"Failed to create actual_time_records indexes: {e}")
+    
+    try:
+        # Route feedback - driver history queries
+        await db.route_feedback.create_index("driver_id")
+        await db.route_feedback.create_index("route_id")
+        await db.route_feedback.create_index([("driver_id", 1), ("created_at", -1)])
+        await db.route_feedback.create_index("feedback_type")
+        indexes_created.append("route_feedback")
+    except Exception as e:
+        logger.error(f"Failed to create route_feedback indexes: {e}")
+    
     logger.info(f"Created indexes for collections: {', '.join(indexes_created)}")
     return indexes_created
 

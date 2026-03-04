@@ -17,6 +17,10 @@ from app.routes.customer_rewards import router as customer_rewards_router
 from app.routes import trips, payments
 from app.routes.websocket import router as websocket_router
 from app.routes.nduna import router as nduna_router
+from app.routes.route_memory import router as route_memory_router
+from app.routes.pricing_intelligence import router as pricing_intelligence_router
+from app.routes.community import router as community_router
+from app.routes.nduna_intelligence import router as nduna_intelligence_router
 from app.config import settings
 from app.database import (
     connect_db, 
@@ -116,6 +120,9 @@ api_v1.include_router(referrals_router, prefix="/referrals", tags=["referrals"])
 api_v1.include_router(customer_rewards_router, prefix="/customer-rewards", tags=["customer-rewards"])
 api_v1.include_router(trips.router, prefix="/trips", tags=["trips"])
 api_v1.include_router(payments.router, prefix="/payments", tags=["payments"])
+api_v1.include_router(pricing_intelligence_router, prefix="/pricing-intelligence", tags=["pricing-intelligence"])
+api_v1.include_router(community_router, prefix="/community", tags=["community"])
+api_v1.include_router(nduna_intelligence_router, prefix="/nduna-intelligence", tags=["nduna-intelligence"])
 
 # Include the v1 router in main app
 app.include_router(api_v1)
@@ -123,6 +130,7 @@ app.include_router(api_v1)
 # WebSocket and chatbot at different prefixes
 app.include_router(websocket_router, prefix="/ws", tags=["websocket"])
 app.include_router(nduna_router, prefix="/api/nduna", tags=["nduna-chatbot"])
+app.include_router(route_memory_router, prefix="/api/route-memory", tags=["route-memory"])
 
 
 @app.get("/")

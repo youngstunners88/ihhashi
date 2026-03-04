@@ -220,6 +220,11 @@ COLLECTIONS = {
     "products": "products",
     "reviews": "reviews",
     "refunds": "refunds",
+    # Route Memory collections (Phase 1)
+    "route_segments": "route_segments",
+    "driver_insights": "driver_insights",
+    "actual_time_records": "actual_time_records",
+    "route_feedback": "route_feedback",
 }
 
 

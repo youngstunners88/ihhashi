@@ -238,6 +238,64 @@ Based on successful referrals:
 
 ---
 
+## 🧠 ROUTE MEMORY SYSTEM
+
+A driver knowledge capture and intelligence system for improved ETAs and route suggestions.
+
+### Phase 1: Foundation ✅ COMPLETE
+- Database models: `route_memory.py`
+- API endpoints: `/api/route-memory/*`
+- Submit actual time records
+- Submit driver insights (shortcuts, avoid areas, road work)
+- Submit route feedback (smooth/ok/delayed)
+- Query route intelligence
+
+### Phase 2: Pricing Intelligence ✅ COMPLETE
+- Models: `pricing_intelligence.py`
+- API endpoints: `/api/v1/pricing-intelligence/*`
+- Pricing gap detection and tracking
+- Conversion by tier analysis
+- Churn by offer tracking
+- Daily revenue vs forecast
+- Pre-built query plans:
+  - `windowed_price_deltas`
+  - `underperforming_tiers`
+  - `churn_streaks`
+  - `revenue_variance_alerts`
+- Reporter template: `/api/v1/pricing-intelligence/report`
+
+### Phase 3: Community ✅ COMPLETE
+- Models: `community.py`
+- API endpoints: `/api/v1/community/*`
+- Insight validation system (upvotes, downvotes, confirmations)
+- Driver reputation scoring (Newcomer → Scout → Navigator → Expert → Legend)
+- Local knowledge map (geographic clustering of insights)
+- Badge system (First Light, Shortcut King, Safety Scout, etc.)
+- Leaderboard
+
+### Phase 4: Nduna Integration ✅ COMPLETE
+- API endpoints: `/api/v1/nduna-intelligence/*`
+- ETA calculation with route memory data
+- Best route suggestions based on community knowledge
+- Community insight alerts for drivers
+- Driver performance analytics
+- Context provider for Nduna chatbot
+- Analytics dashboard data
+
+### Key Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/route-memory/actual-time` | Submit delivery time data |
+| `POST /api/route-memory/insights` | Submit driver insight |
+| `POST /api/route-memory/feedback` | Submit route feedback |
+| `GET /api/v1/nduna-intelligence/eta` | Calculate ETA with route memory |
+| `GET /api/v1/nduna-intelligence/suggest-route` | Get best route suggestions |
+| `GET /api/v1/community/reputation/{driver_id}` | Get driver reputation |
+| `GET /api/v1/pricing-intelligence/report` | Get pricing intelligence report |
+
+---
+
 ## 🤖 AGENT SYNCHRONIZATION
 
 ### Keeping Agents Updated
