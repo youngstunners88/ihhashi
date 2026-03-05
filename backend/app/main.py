@@ -48,15 +48,18 @@ async def lifespan(app: FastAPI):
     logger.info("Starting iHhashi API...")
     
     # Initialize MongoDB connection
-    await connect_db()
-    logger.info("MongoDB connected")
-    
-    # Create database indexes
     try:
-        index_results = await ensure_indexes(database)
-        logger.info(f"Database indexes created: {len(index_results)} collections updated")
+        await connect_db()
+        logger.info("MongoDB connected")
+        
+        # Create database indexes only if connected
+        try:
+            index_results = await ensure_indexes(database)
+            logger.info(f"Database indexes created: {len(index_results)} collections updated")
+        except Exception as e:
+            logger.warning(f"Failed to create indexes: {e}")
     except Exception as e:
-        logger.warning(f"Failed to create indexes: {e}")
+        logger.error(f"MongoDB connection failed: {e}")
     
     # Initialize Redis connection
     try:
@@ -80,8 +83,11 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Error closing Redis: {e}")
     
     # Close MongoDB connection
-    await close_db()
-    logger.info("MongoDB connection closed")
+    try:
+        await close_db()
+        logger.info("MongoDB connection closed")
+    except Exception as e:
+        logger.warning(f"Error closing MongoDB: {e}")
 
 app = FastAPI(
     title="iHhashi API",
@@ -155,24 +161,26 @@ async def root():
 async def health():
     """Health check with database and Redis connectivity test"""
     # Check MongoDB
-    db_status = await db_health_check()
+    try:
+        db_status = await db_health_check()
+    except Exception as e:
+        db_status = {"status": "unhealthy", "message": str(e)}
     
     # Check Redis
     redis_status = "disconnected"
     try:
         from app.core.redis_client import get_redis
         redis_client = get_redis()
-        await redis_client.ping()
-        redis_status = "connected"
-    except Exception as e:
-        redis_status = f"unavailable"
+        if redis_client:
+            await redis_client.ping()
+            redis_status = "connected"
+    except Exception:
+        redis_status = "unavailable"
     
     # Determine overall status
     overall_status = "healthy"
     if db_status.get("status") != "healthy":
         overall_status = "degraded"
-    elif redis_status != "connected":
-        overall_status = "healthy"  # Redis is optional
     
     return {
         "status": overall_status,

@@ -29,6 +29,7 @@ async def connect_db():
     Initialize MongoDB connection with pooling and proper configuration.
     
     Call this on application startup.
+    In production, logs warning but doesn't crash if DB is unavailable.
     """
     global client, database
     
@@ -38,14 +39,6 @@ async def connect_db():
     
     try:
         # Connection pooling configuration
-        # maxPoolSize: Maximum number of connections in the pool
-        # minPoolSize: Minimum connections to maintain
-        # maxIdleTimeMS: Close idle connections after this time
-        # waitQueueTimeoutMS: Max time to wait for an available connection
-        # connectTimeoutMS: Connection timeout
-        # socketTimeoutMS: Socket operation timeout
-        # serverSelectionTimeoutMS: Time to find a suitable server
-        
         client = AsyncIOMotorClient(
             settings.mongodb_url,
             maxPoolSize=100,
@@ -57,7 +50,7 @@ async def connect_db():
             serverSelectionTimeoutMS=5000,  # 5 seconds
             retryWrites=True,
             retryReads=True,
-            driver=DriverInfo(name="iHhashi", version="0.3.0"),
+            driver=DriverInfo(name="iHhashi", version="0.4.2"),
         )
         
         database = client[settings.db_name]
@@ -72,7 +65,12 @@ async def connect_db():
         
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
-        raise
+        # In production, don't crash - the health endpoint will report unhealthy
+        # This allows the app to start and retry connections later
+        if settings.environment == "production":
+            logger.warning("App starting without database connection. Health check will report degraded.")
+        else:
+            raise
 
 
 async def close_db():
