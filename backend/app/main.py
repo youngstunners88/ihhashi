@@ -14,6 +14,8 @@ from app.routes.vendors import router as vendors_router
 from app.routes.delivery_servicemen import router as servicemen_router
 from app.routes.referrals import router as referrals_router
 from app.routes.customer_rewards import router as customer_rewards_router
+from app.routes.addresses import router as addresses_router
+from app.routes.products import router as products_router
 from app.routes import trips, payments
 from app.routes.websocket import router as websocket_router
 from app.routes.nduna import router as nduna_router
@@ -123,6 +125,14 @@ api_v1.include_router(payments.router, prefix="/payments", tags=["payments"])
 api_v1.include_router(pricing_intelligence_router, prefix="/pricing-intelligence", tags=["pricing-intelligence"])
 api_v1.include_router(community_router, prefix="/community", tags=["community"])
 api_v1.include_router(nduna_intelligence_router, prefix="/nduna-intelligence", tags=["nduna-intelligence"])
+
+# Addresses and products
+api_v1.include_router(addresses_router, prefix="/addresses", tags=["addresses"])
+api_v1.include_router(products_router, prefix="/products", tags=["products"])
+
+# Users routes
+from app.routes.users import router as users_router
+api_v1.include_router(users_router, prefix="/users", tags=["users"])
 
 # Include the v1 router in main app
 app.include_router(api_v1)

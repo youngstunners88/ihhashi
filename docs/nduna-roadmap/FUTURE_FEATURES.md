@@ -1,6 +1,6 @@
 # Nduna Bot - Future Features Roadmap
 
-> Last updated: 2026-02-19
+> Last updated: 2026-03-04
 > Current version: 0.5.0
 
 ## High Priority
@@ -80,9 +80,196 @@ Give Nduna a male South African voice for text-to-speech responses.
 
 ---
 
+### 3. Live Avatar - Real-time Conversational Agent
+**Status**: Research & Planning
+**Priority**: High
+**Estimated effort**: 4-6 weeks
+
+**Description**:
+Transform Nduna into a live, interactive avatar that delivery servicemen, customers, and merchants can speak to in real time - similar to ChatGPT's Advanced Voice Mode or digital human assistants.
+
+**User Experience**:
+- User opens Nduna in app or WhatsApp
+- Sees animated avatar (the Nduna character from branding)
+- Speaks naturally - avatar responds with voice + lip-sync
+- Real-time back-and-forth conversation
+- Can handle orders, questions, support issues
+
+**Technical Feasibility Analysis**:
+
+#### Groq API Capabilities
+| Component | Groq Support | Notes |
+|-----------|--------------|-------|
+| Speech-to-Text | ✓ Whisper-large-v3-turbo | Very fast, already integrated |
+| LLM Inference | ✓ Llama 3.1/3.2 | Extremely fast on LPU |
+| Text-to-Speech | ✗ Not available | Need external provider |
+| Avatar Generation | ✗ Not available | Need external service |
+| Streaming Audio | Partial | Can stream text, not audio |
+
+**Conclusion**: Groq is excellent for the "brain" (STT + LLM) but cannot handle voice output or avatar rendering alone. We need a hybrid architecture.
+
+---
+
+**Architecture Options**:
+
+#### Option A: Full Pipeline (Recommended for MVP)
+```
+[User Audio] → Groq Whisper (STT) → Groq Llama (LLM) → ElevenLabs (TTS) → D-ID/Sadalkar (Avatar) → [User]
+```
+
+**Latency**: 2-4 seconds per turn
+**Cost**: Moderate ($0.02-0.05 per minute)
+**Quality**: High
+
+**Pros**:
+- Uses existing Groq integration
+- Best-in-class TTS (ElevenLabs with SA voice clone)
+- Professional avatar generation (D-ID)
+- Feasible with current tech
+
+**Cons**:
+- Not truly "real-time" - slight delay
+- Multiple API calls = more points of failure
+- Cost adds up at scale
+
+---
+
+#### Option B: Real-time Voice Mode (Lower Latency)
+```
+[User Audio Stream] → WebSocket → Groq Whisper → Groq Llama (streaming) → ElevenLabs (streaming TTS) → [Audio Stream]
+```
+Plus: Simple animated avatar (pre-rendered loops with basic lip-sync)
+
+**Latency**: 1-2 seconds
+**Cost**: Lower (no video generation)
+**Quality**: Good voice, simpler avatar
+
+**Pros**:
+- Near real-time feel
+- Lower cost
+- Simpler infrastructure
+
+**Cons**:
+- Avatar less impressive (2D animation vs video)
+- More complex WebSocket handling
+
+---
+
+#### Option C: Full Digital Human (Premium)
+Use specialized digital human platforms:
+- **UneeQ** - Enterprise digital humans
+- **Soul Machines** - AI avatars with emotional intelligence
+- **D-ID** - Real-time avatar API
+
+**Latency**: 1-3 seconds
+**Cost**: High ($500-2000/month + usage)
+**Quality**: Premium, enterprise-grade
+
+**Pros**:
+- Production-ready
+- Professional appearance
+- Full support
+
+**Cons**:
+- Expensive at scale
+- Less customization
+- Vendor lock-in
+
+---
+
+**Recommended Approach**: Hybrid (Option A + B)
+
+**Phase 1**: Voice-first with simple avatar
+- Groq Whisper for STT (already integrated)
+- Groq Llama for fast inference
+- ElevenLabs for TTS with SA male voice
+- Simple 2D avatar animation (pre-rendered expressions)
+
+**Phase 2**: Video avatar
+- D-ID or Sadalkar for realistic lip-sync
+- Full body avatar video
+- Real-time rendering
+
+**Phase 3**: Real-time streaming
+- WebSocket for continuous audio
+- Interruptible responses
+- Full duplex conversation
+
+---
+
+**Technical Requirements**:
+
+**Backend**:
+- [ ] WebSocket server for real-time audio streaming
+- [ ] Audio buffer management (handle interruptions)
+- [ ] Streaming response generation
+- [ ] Session state management
+- [ ] Rate limiting per user
+
+**External Services**:
+- [ ] ElevenLabs account + SA voice clone
+- [ ] D-ID or Sadalkar API access
+- [ ] CDN for avatar video delivery
+
+**Frontend (App)**:
+- [ ] WebRTC or WebSocket audio capture
+- [ ] Audio playback with visualization
+- [ ] Avatar rendering component
+- [ ] Offline mode fallback
+
+**WhatsApp Integration**:
+- [ ] Voice note processing (already exists)
+- [ ] Send audio responses as voice notes
+- [ ] Avatar video as MP4 (may have size limits)
+
+---
+
+**Cost Estimates** (per 1000 users, 5 min conversation each):
+
+| Service | Cost Estimate |
+|---------|---------------|
+| Groq (STT + LLM) | ~$50 |
+| ElevenLabs (TTS) | ~$100 |
+| D-ID (Avatar) | ~$200 |
+| **Total** | ~$350 per 1000 users |
+
+*Note: Costs decrease with volume negotiations*
+
+---
+
+**Key Challenges**:
+
+1. **Latency**: Minimizing delay between user speech and avatar response
+   - Solution: Streaming at each step, parallel processing
+
+2. **Data costs for users**: Video/audio uses significant data
+   - Solution: Audio-only option, low-res avatar, WiFi preloading
+
+3. **SA accent accuracy**: Getting natural SA voice
+   - Solution: ElevenLabs voice cloning with SA voice samples
+
+4. **Scale**: Handling many concurrent conversations
+   - Solution: Queue system, load balancing, caching common responses
+
+5. **WhatsApp limitations**: No real-time streaming on WhatsApp
+   - Solution: Send voice notes, maybe short video clips
+
+---
+
+**Dependencies**:
+- ElevenLabs integration (can start TTS without avatar)
+- WebSocket infrastructure
+- Avatar asset creation (video/animation files)
+
+**Related Features**:
+- South African Male Voice (Section 2) - prerequisite
+- Multi-language Voice Support (Section 3)
+
+---
+
 ## Medium Priority
 
-### 3. Multi-language Voice Support
+### 4. Multi-language Voice Support
 **Status**: Planned
 **Priority**: Medium
 
@@ -91,7 +278,7 @@ Support voice input/output in all 11 SA languages:
 - Sepedi, Setswana, Sesotho
 - Tsonga, Swati, Venda, Ndebele
 
-### 4. Order History & Reordering
+### 5. Order History & Reordering
 **Status**: Planned
 **Priority**: Medium
 
@@ -99,7 +286,7 @@ Support voice input/output in all 11 SA languages:
 - "What did I order from [merchant] before?"
 - Quick reorder buttons
 
-### 5. Smart Suggestions
+### 6. Smart Suggestions
 **Status**: Planned
 **Priority**: Medium
 
@@ -113,13 +300,13 @@ Context-aware suggestions based on:
 
 ## Low Priority / Ideas
 
-### 6. Group Ordering
+### 7. Group Ordering
 Multiple people can add to same order via shared link
 
-### 7. Subscription Orders
+### 8. Subscription Orders
 "Every Monday morning, order me a coffee from [place]"
 
-### 8. Voice Ordering Flow
+### 9. Voice Ordering Flow
 Full voice-first ordering experience:
 1. User speaks order
 2. Nduna confirms via voice
