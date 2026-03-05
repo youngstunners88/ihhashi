@@ -1,6 +1,6 @@
 #!/bin/bash
 # Complete iHhashi Deployment Script
-# Run this after: railway login && netlify login
+# Usage: ./DEPLOY_NOW.sh (after: railway login && netlify login)
 
 set -e
 
@@ -32,6 +32,9 @@ fi
 echo -e "${GREEN}✓ Netlify authenticated${NC}"
 echo ""
 
+read -p "Press Enter to start deployment..."
+echo ""
+
 # ===============================
 # BACKEND DEPLOYMENT
 # ===============================
@@ -45,7 +48,7 @@ if [ ! -f .railway/config.json ] 2>/dev/null; then
 fi
 
 # Deploy
-echo -e "${YELLOW}Deploying...${NC}"
+echo -e "${YELLOW}Deploying backend...${NC}"
 railway up
 
 # Get domain
@@ -66,22 +69,33 @@ echo -e "${BLUE}>>> Deploying Frontend to Netlify...${NC}"
 cd /home/teacherchris37/frontend
 
 # Create env file with Railway URL
-echo -e "${YELLOW}Creating .env.local with API URL...${NC}"
+echo -e "${YELLOW}Setting up frontend environment...${NC}"
 cat > .env.local << EOF
 VITE_API_URL=https://$RAILWAY_URL
 VITE_APP_ENV=production
 EOF
 
+echo -e "${GREEN}✓ Created .env.local with API URL${NC}"
+
 # Install dependencies
-echo -e "${YELLOW}Installing dependencies...${NC}"
+echo -e "${YELLOW}Installing dependencies (this may take a minute)...${NC}"
 if [ ! -d node_modules ]; then
-    npm ci --legacy-peer-deps
+    npm ci --legacy-peer-deps 2>&1 | grep -v "npm warn" || true
+else
+    echo -e "${GREEN}✓ Dependencies already installed${NC}"
 fi
 
 # Build
 echo -e "${YELLOW}Building frontend...${NC}"
 rm -rf dist
-npm run build
+npm run build 2>&1 | tail -20
+
+if [ ! -d dist ]; then
+    echo -e "${RED}❌ Build failed - dist folder not found${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Build successful${NC}"
 
 # Check if linked to site
 if [ ! -f .netlify/state.json ] 2>/dev/null; then
@@ -91,32 +105,26 @@ fi
 
 # Deploy
 echo -e "${YELLOW}Deploying to Netlify...${NC}"
-DEPLOY_OUTPUT=$(netlify deploy --prod --dir=dist 2>&1)
-echo "$DEPLOY_OUTPUT"
-
-# Extract URL
-NETLIFY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[a-zA-Z0-9-]+\.netlify\.app' | head -1)
-
-if [ -n "$NETLIFY_URL" ]; then
-    echo ""
-    echo -e "${GREEN}✓ Frontend deployed: $NETLIFY_URL${NC}"
-else
-    NETLIFY_URL="[Check Netlify dashboard]"
-fi
+netlify deploy --prod --dir=dist
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}   Deployment Complete!${NC}"
+echo -e "${GREEN}   ✅ Deployment Complete!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "${BLUE}Your URLs:${NC}"
-echo -e "  Backend:  https://$RAILWAY_URL"
-echo -e "  Frontend: $NETLIFY_URL"
+echo -e "  🚀 Backend:  https://$RAILWAY_URL"
 echo ""
-echo -e "${YELLOW}⚠️  IMPORTANT: Update CORS_ORIGINS in Railway!${NC}"
-echo "   Go to: https://railway.app/dashboard"
-echo "   Add CORS_ORIGINS=$NETLIFY_URL"
-echo "   Then run: cd backend && railway up"
+echo -e "  🌐 Frontend: $(netlify status --json 2>/dev/null | grep -o '"url":"[^"]*"' | cut -d'"' -f4 || echo '[Check Netlify dashboard]')"
+echo ""
+echo -e "${YELLOW}⚠️  IMPORTANT NEXT STEP:${NC}"
+echo "   Update CORS_ORIGINS in Railway with your Netlify URL!"
+echo ""
+echo "   1. Go to: https://railway.app/dashboard"
+echo "   2. Select your project"
+echo "   3. Go to Variables tab"
+echo "   4. Add: CORS_ORIGINS=https://YOUR-NETLIFY-URL.netlify.app"
+echo "   5. Redeploy: cd backend && railway up"
 echo ""
 echo -e "${BLUE}Test your deployment:${NC}"
 echo "   curl https://$RAILWAY_URL/health"
