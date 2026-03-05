@@ -16,9 +16,22 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiUrl,
           changeOrigin: true,
-          // Optional: rewrite path if needed
-          // rewrite: (path) => path.replace(/^\/api/, '/api/v1'),
         },
+      },
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: ['./src/__tests__/setup.ts'],
+      css: true,
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json', 'html'],
+        exclude: [
+          'node_modules/',
+          'src/__tests__/',
+          '**/*.d.ts',
+        ],
       },
     },
   }

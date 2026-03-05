@@ -90,3 +90,6 @@ frontend/android/build/
 *.xcworkspace
 *.xcuserdata
 Pods/
+
+# Local Netlify folder
+.netlify

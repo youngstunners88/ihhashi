@@ -1,0 +1,33 @@
+# OpenFang Configuration
+# iHhashi Unrestricted Chat Setup
+
+[llm]
+provider = "groq"
+model = "llama-3.3-70b-versatile"
+api_key = "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"
+
+[llm.params]
+temperature = 0.8
+max_tokens = 8192
+top_p = 0.95
+
+[agent]
+name = "iHhashi Assistant"
+description = "24/7 autonomous assistant for iHhashi - unrestricted chat mode"
+
+[channels.telegram]
+enabled = true
+bot_token = "8676557146:AAE70M-LACFLRQnJI6r7gPI6b7lj3zFfzsI"
+parse_mode = "Markdown"
+reply_to_messages = true
+
+[memory]
+enabled = true
+
+[security]
+level = "permissive"
+sandbox = false
+
+[tools]
+enabled = ["shell", "http", "file"]
+allowlist = ["*"]

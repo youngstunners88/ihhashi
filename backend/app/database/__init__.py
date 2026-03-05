@@ -29,6 +29,7 @@ async def connect_db():
     Initialize MongoDB connection with pooling and proper configuration.
     
     Call this on application startup.
+    In production, logs warning but doesn't crash if DB is unavailable.
     """
     global client, database
     
@@ -38,14 +39,6 @@ async def connect_db():
     
     try:
         # Connection pooling configuration
-        # maxPoolSize: Maximum number of connections in the pool
-        # minPoolSize: Minimum connections to maintain
-        # maxIdleTimeMS: Close idle connections after this time
-        # waitQueueTimeoutMS: Max time to wait for an available connection
-        # connectTimeoutMS: Connection timeout
-        # socketTimeoutMS: Socket operation timeout
-        # serverSelectionTimeoutMS: Time to find a suitable server
-        
         client = AsyncIOMotorClient(
             settings.mongodb_url,
             maxPoolSize=100,
@@ -57,7 +50,7 @@ async def connect_db():
             serverSelectionTimeoutMS=5000,  # 5 seconds
             retryWrites=True,
             retryReads=True,
-            driver=DriverInfo(name="iHhashi", version="0.3.0"),
+            driver=DriverInfo(name="iHhashi", version="0.4.2"),
         )
         
         database = client[settings.db_name]
@@ -72,7 +65,12 @@ async def connect_db():
         
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
-        raise
+        # In production, don't crash - the health endpoint will report unhealthy
+        # This allows the app to start and retry connections later
+        if settings.environment == "production":
+            logger.warning("App starting without database connection. Health check will report degraded.")
+        else:
+            raise
 
 
 async def close_db():
@@ -271,6 +269,38 @@ def notifications_collection():
 # Import index management
 from app.database.indexes import ensure_indexes, get_index_stats, drop_all_indexes
 
+# Import operations when database is available
+try:
+    from app.database.operations import (
+        # Referrals
+        create_referral_code, get_referral_code_by_user, get_referral_code_by_code,
+        create_referral, complete_referral, get_referrals_by_referrer,
+        get_referral_stats, check_referral_eligibility,
+        
+        # Customer Rewards
+        create_customer_reward_account, get_customer_reward_account,
+        get_or_create_customer_reward_account, add_coins_to_customer,
+        spend_coins, get_coin_transactions, update_customer_tier,
+        get_customer_tier_info, redeem_coins_for_reward, get_customer_referral_history,
+        
+        # Vendor
+        extend_vendor_trial, get_vendor_referral_stats,
+        
+        # Orders
+        create_order, get_order_by_id, get_orders_by_buyer,
+        update_order_status, assign_driver_to_order,
+        
+        # Users
+        get_user_by_id, get_user_by_email, get_user_by_phone,
+        update_user, create_user,
+        
+        # Analytics
+        get_all_referral_stats, process_pending_referrals, get_top_referrers,
+    )
+    OPERATIONS_AVAILABLE = True
+except ImportError:
+    OPERATIONS_AVAILABLE = False
+
 __all__ = [
     "connect_db",
     "close_db",
@@ -293,4 +323,24 @@ __all__ = [
     "notifications_collection",
     "client",
     "database",
+    "OPERATIONS_AVAILABLE",
+    # Referral operations
+    "create_referral_code", "get_referral_code_by_user", "get_referral_code_by_code",
+    "create_referral", "complete_referral", "get_referrals_by_referrer",
+    "get_referral_stats", "check_referral_eligibility",
+    # Customer reward operations
+    "create_customer_reward_account", "get_customer_reward_account",
+    "get_or_create_customer_reward_account", "add_coins_to_customer",
+    "spend_coins", "get_coin_transactions", "update_customer_tier",
+    "get_customer_tier_info", "redeem_coins_for_reward", "get_customer_referral_history",
+    # Vendor operations
+    "extend_vendor_trial", "get_vendor_referral_stats",
+    # Order operations
+    "create_order", "get_order_by_id", "get_orders_by_buyer",
+    "update_order_status", "assign_driver_to_order",
+    # User operations
+    "get_user_by_id", "get_user_by_email", "get_user_by_phone",
+    "update_user", "create_user",
+    # Analytics operations
+    "get_all_referral_stats", "process_pending_referrals", "get_top_referrers",
 ]

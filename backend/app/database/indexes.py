@@ -159,28 +159,59 @@ async def create_indexes(db: AsyncIOMotorDatabase):
     except Exception as e:
         logger.error(f"Failed to create route_feedback indexes: {e}")
     
-    # Referral system indexes
+    # Referral and Rewards collections
     try:
-        # Referral codes - unique code lookup
+        # Referral codes - unique codes and user lookups
         await db.referral_codes.create_index("code", unique=True)
         await db.referral_codes.create_index("user_id")
+        await db.referral_codes.create_index("referral_type")
         await db.referral_codes.create_index([("user_id", 1), ("referral_type", 1)])
-        await db.referral_codes.create_index("status")
         indexes_created.append("referral_codes")
     except Exception as e:
         logger.error(f"Failed to create referral_codes indexes: {e}")
     
     try:
-        # Referrals - track referral relationships
+        # Referrals - track referrals efficiently
         await db.referrals.create_index("referrer_id")
         await db.referrals.create_index("referee_id")
         await db.referrals.create_index("referral_code")
         await db.referrals.create_index("status")
         await db.referrals.create_index([("referrer_id", 1), ("status", 1)])
-        await db.referrals.create_index([("referral_code", 1), ("status", 1)])
+        await db.referrals.create_index([("referral_type", 1), ("status", 1)])
+        await db.referrals.create_index([("created_at", -1)])
         indexes_created.append("referrals")
     except Exception as e:
         logger.error(f"Failed to create referrals indexes: {e}")
+    
+    try:
+        # Customer reward accounts - unique customer_id and referral_code
+        await db.customer_reward_accounts.create_index("customer_id", unique=True)
+        await db.customer_reward_accounts.create_index("referral_code", unique=True, sparse=True)
+        await db.customer_reward_accounts.create_index("tier")
+        await db.customer_reward_accounts.create_index("hashi_coins_balance")
+        indexes_created.append("customer_reward_accounts")
+    except Exception as e:
+        logger.error(f"Failed to create customer_reward_accounts indexes: {e}")
+    
+    try:
+        # Coin transactions - transaction history queries
+        await db.coin_transactions.create_index("customer_id")
+        await db.coin_transactions.create_index([("customer_id", -1), ("created_at", -1)])
+        await db.coin_transactions.create_index("transaction_type")
+        await db.coin_transactions.create_index("related_referral_id")
+        indexes_created.append("coin_transactions")
+    except Exception as e:
+        logger.error(f"Failed to create coin_transactions indexes: {e}")
+    
+    try:
+        # Reward redemptions - redemption tracking
+        await db.reward_redemptions.create_index("customer_id")
+        await db.reward_redemptions.create_index("status")
+        await db.reward_redemptions.create_index([("customer_id", -1), ("created_at", -1)])
+        await db.reward_redemptions.create_index("expires_at")
+        indexes_created.append("reward_redemptions")
+    except Exception as e:
+        logger.error(f"Failed to create reward_redemptions indexes: {e}")
     
     logger.info(f"Created indexes for collections: {', '.join(indexes_created)}")
     return indexes_created

@@ -10,14 +10,18 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+      - ./backend/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ihhashi
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-ihhashi}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-ihhashi_dev_2024}
+      MONGO_INITDB_DATABASE: ihhashi
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - ihhashi-network
 
   # Redis Cache
   redis:
@@ -28,29 +32,33 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - ihhashi-network
 
-  # Backend API
+  # Backend API (Development)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: development
     container_name: ihhashi-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
       - ENVIRONMENT=development
-      - MONGODB_URL=mongodb://ihhashi:${MONGO_PASSWORD:-ihhashi_dev_2024}@mongodb:27017
+      - MONGODB_URL=mongodb://${MONGO_USERNAME:-ihhashi}:${MONGO_PASSWORD:-ihhashi_dev_2024}@mongodb:27017/ihhashi?authSource=admin
       - DB_NAME=ihhashi
       - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_change_in_production}
-      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_change_in_production_32chars}
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://frontend:5173
+      - DEBUG=true
     volumes:
       - ./backend:/app
       - /app/__pycache__
@@ -59,9 +67,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - ihhashi-network
 
-  # Frontend (Vite React)
+  # Frontend (Vite React - Development)
   frontend:
     build:
       context: ./frontend
@@ -71,18 +80,68 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000/api/v1
+      - VITE_API_URL=http://localhost:8000
+      - VITE_APP_ENV=development
+      - CHOKIDAR_USEPOLLING=true
     volumes:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
       - backend
-    command: npm run dev -- --host
+    networks:
+      - ihhashi-network
+
+  # GlitchTip (Error Tracking) - Optional
+  glitchtip:
+    image: glitchtip/glitchtip:latest
+    container_name: ihhashi-glitchtip
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@glitchtip-db:5432/glitchtip
+      - SECRET_KEY=${GLITCHTIP_SECRET_KEY:-glitchtip-secret-key-change-me}
+      - PORT=8000
+      - GLITCHTIP_DOMAIN=http://localhost:8001
+      - DEFAULT_FROM_EMAIL=glitchtip@localhost
+      - CELERY_WORKER_CONCURRENCY=2
+    depends_on:
+      - glitchtip-db
+      - glitchtip-redis
+    networks:
+      - ihhashi-network
+    profiles:
+      - monitoring
+
+  glitchtip-db:
+    image: postgres:15-alpine
+    container_name: ihhashi-glitchtip-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=glitchtip
+    volumes:
+      - glitchtip_db_data:/var/lib/postgresql/data
+    networks:
+      - ihhashi-network
+    profiles:
+      - monitoring
+
+  glitchtip-redis:
+    image: redis:7-alpine
+    container_name: ihhashi-glitchtip-redis
+    restart: unless-stopped
+    networks:
+      - ihhashi-network
+    profiles:
+      - monitoring
 
 volumes:
   mongodb_data:
   redis_data:
+  glitchtip_db_data:
 
 networks:
-  default:
-    name: ihhashi-network
+  ihhashi-network:
+    driver: bridge

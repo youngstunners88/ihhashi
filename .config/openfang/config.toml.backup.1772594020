@@ -1,0 +1,54 @@
+# OpenFang Configuration - iHhashi Setup
+# LLM Provider: Groq
+
+[llm]
+provider = "groq"
+api_key = "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"
+model = "llama-3.3-70b-versatile"
+# Alternative models: mixtral-8x7b-32768, gemma2-9b-it, llama-3.1-8b-instant
+
+[llm.params]
+temperature = 0.7
+max_tokens = 4096
+top_p = 0.9
+
+[agent]
+name = "iHhashi Assistant"
+description = "24/7 autonomous assistant for iHhashi food delivery platform"
+system_prompt = """You are the iHhashi Assistant, an autonomous AI agent supporting a South African food delivery platform.
+
+Your capabilities include:
+- Web browsing and research via PinchTab browser automation
+- Data collection and analysis
+- Task automation and scheduling
+- Integration with the iHhashi platform
+
+When using browser automation:
+1. Use pinchtab commands to navigate and interact with web pages
+2. Extract information efficiently
+3. Report findings with sources
+
+Always be helpful, professional, and security-conscious."""
+
+[memory]
+enabled = true
+backend = "sqlite"
+path = "~/.config/openfang/memory.db"
+vector_dim = 384
+
+[security]
+level = "standard"
+sandbox = true
+audit_log = true
+
+[channels]
+# Telegram will be configured when you provide the bot token
+# Format: telegram = { bot_token = "YOUR_BOT_TOKEN", allowed_users = [] }
+
+[hands]
+# Autonomous hands that run on schedules
+enabled = ["researcher", "browser"]
+
+[tools]
+enabled = ["shell", "http", "browser", "file", "cron"]
+allowlist = ["pinchtab", "curl", "grep", "cat", "ls", "pwd", "echo"]

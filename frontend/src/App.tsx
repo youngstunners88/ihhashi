@@ -7,11 +7,18 @@ import Home from './pages/Home'
 import Auth from './pages/auth/Auth'
 import Products from './pages/catalog/Products'
 import { CartPage } from './pages/CartPage'
+import { CheckoutPage } from './pages/CheckoutPage'
+import { OrderTrackingPage } from './pages/OrderTrackingPage'
 import { MerchantPage } from './pages/MerchantPage'
 import { MerchantDashboard } from './pages/MerchantDashboard'
+import { MerchantRegistrationPage } from './pages/MerchantRegistrationPage'
 import { RiderDashboard } from './pages/RiderDashboard'
+import { DriverRegistrationPage } from './pages/DriverRegistrationPage'
+import { PaymentSuccessPage } from './pages/PaymentSuccessPage'
+import { NotFoundPage } from './pages/NotFoundPage'
 import Orders from './pages/orders/Orders'
 import Profile from './pages/profile/Profile'
+import { RewardsDashboard, ReferralPage } from './pages/rewards'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import SplashScreen from './components/SplashScreen'
 import { authAPI } from './lib/api'
@@ -66,7 +73,7 @@ const queryClient = new QueryClient({
 // ─── Protected Route ──────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
   const { isAuthenticated, isLoading, user } = useAuth()
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B35]" /></div>
+  if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" /></div>
   if (!isAuthenticated) return <Navigate to="/auth" replace />
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     const dashboards: Record<string, string> = { merchant: '/merchant/dashboard', rider: '/rider/dashboard' }
@@ -130,6 +137,11 @@ function App() {
               <Route path="/products" element={<Products />} />
               <Route path="/products/:category" element={<Products />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/orders/:id/track" element={<OrderTrackingPage />} />
+              <Route path="/payment/success" element={<PaymentSuccessPage />} />
+              <Route path="/merchant/register" element={<MerchantRegistrationPage />} />
+              <Route path="/driver/register" element={<DriverRegistrationPage />} />
               <Route path="/merchant/dashboard" element={
                 <ProtectedRoute allowedRoles={['merchant']}>
                   <MerchantDashboard />
@@ -151,6 +163,25 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Rewards & Referral Routes */}
+              <Route
+                path="/rewards"
+                element={
+                  <ProtectedRoute>
+                    <RewardsDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/rewards/referral"
+                element={
+                  <ProtectedRoute>
+                    <ReferralPage />
+                  </ProtectedRoute>
+                }
+              />
+              {/* 404 - Not Found */}
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </BrowserRouter>
         </QueryClientProvider>

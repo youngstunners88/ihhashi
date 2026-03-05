@@ -1,23 +1,20 @@
 [build]
 builder = "nixpacks"
 
-[build.nixpacksPlan]
-providers = ["python"]
-
-[build.nixpacksPlan.phases.setup]
-nixPkgs = ["python311", "python311Packages.pip", "gcc"]
-
-[build.nixpacksPlan.phases.build]
-cmds = ["python3 -m pip install --upgrade pip", "python3 -m pip install -r requirements.txt"]
-
 [deploy]
-startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WORKERS:-2}"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
 
+[nixpacks]
+# Use Python 3.11
+pythonVersion = "3.11"
+
 [deploy.env]
-PYTHON_VERSION = "3.11"
+# Ensure Python output is not buffered
 PYTHONUNBUFFERED = "1"
 PYTHONDONTWRITEBYTECODE = "1"
+# Default workers - Railway will set this based on available CPUs
+WORKERS = "2"

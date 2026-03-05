@@ -62,4 +62,39 @@ async def create_indexes(db):
     await trips.create_index([("driver_id", ASCENDING), ("status", ASCENDING)], name="idx_driver_trips")
     await trips.create_index([("location", "2dsphere")], name="idx_trip_location")
     
+    # Referral Codes
+    referral_codes = db.referral_codes
+    await referral_codes.create_index([("code", ASCENDING)], unique=True, name="idx_referral_code_unique")
+    await referral_codes.create_index([("user_id", ASCENDING), ("referral_type", ASCENDING)], name="idx_user_type")
+    await referral_codes.create_index([("is_active", ASCENDING)], name="idx_referral_active")
+    
+    # Referrals
+    referrals = db.referrals
+    await referrals.create_index([("referrer_id", ASCENDING), ("referral_type", ASCENDING)], name="idx_referrer_type")
+    await referrals.create_index([("referee_id", ASCENDING), ("referral_type", ASCENDING)], name="idx_referee_type")
+    await referrals.create_index([("status", ASCENDING)], name="idx_referral_status")
+    await referrals.create_index([("referral_code", ASCENDING)], name="idx_referral_code")
+    await referrals.create_index([("created_at", ASCENDING)], name="idx_referral_created")
+    
+    # Customer Reward Accounts
+    reward_accounts = db.customer_reward_accounts
+    await reward_accounts.create_index([("customer_id", ASCENDING)], unique=True, name="idx_customer_reward_unique")
+    await reward_accounts.create_index([("referral_code", ASCENDING)], name="idx_reward_referral_code")
+    await reward_accounts.create_index([("tier", ASCENDING)], name="idx_reward_tier")
+    
+    # Coin Transactions
+    coin_transactions = db.coin_transactions
+    await coin_transactions.create_index([("customer_id", ASCENDING), ("created_at", -1)], name="idx_customer_txn_time")
+    await coin_transactions.create_index([("transaction_type", ASCENDING)], name="idx_txn_type")
+    await coin_transactions.create_index([("related_referral_id", ASCENDING)], name="idx_txn_referral")
+    
+    # Vendor Referral Stats
+    vendor_stats = db.vendor_referral_stats
+    await vendor_stats.create_index([("vendor_id", ASCENDING)], unique=True, name="idx_vendor_stats_unique")
+    
+    # Reward Redemptions
+    reward_redemptions = db.reward_redemptions
+    await reward_redemptions.create_index([("customer_id", ASCENDING), ("status", ASCENDING)], name="idx_redemption_customer_status")
+    await reward_redemptions.create_index([("expires_at", ASCENDING)], name="idx_redemption_expires")
+    
     print("✅ Database indexes created")

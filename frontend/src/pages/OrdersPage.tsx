@@ -1,283 +1,377 @@
-import { useState, useEffect } from 'react'
-import { OrderCard } from '../components/order/OrderCard'
-import { RefundRequestModal, RefundRequestData } from '../components/order/RefundRequestModal'
-import { RefundStatusCard } from '../components/order/RefundStatusCard'
-import { OrderStatus, RefundStatus } from '../types/order'
+/**
+ * OrdersPage
+ * Displays user's orders with real-time status updates via WebSocket
+ */
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useOrderTracking, useUserNotifications } from '../hooks/useWebSocket';
+import { notificationHelpers } from '../components/realtime';
+import { RealTimeOrderTracker, NotificationToast } from '../components/realtime';
+import { OrderWithRealtime, OrderStatus, NotificationData } from '../types/websocket';
+import { ordersAPI } from '../lib/api';
+import { useAuth } from '../App';
 
-interface OrderItem {
-  product_id: string
-  product_name: string
-  quantity: number
-  unit_price: number
-  total_price: number
+// Icons
+const icons = {
+  refresh: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  ),
+  orders: (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+    </svg>
+  ),
+  empty: (
+    <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+    </svg>
+  ),
+  back: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    </svg>
+  ),
+  list: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+  ),
+  grid: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    </svg>
+  ),
+};
+
+// Order list item component
+interface OrderListItemProps {
+  order: OrderWithRealtime;
+  isSelected: boolean;
+  onClick: () => void;
 }
 
-interface DeliveryInfo {
-  address_label: string
-  address_line1: string
-  address_line2?: string
-  city: string
-  area?: string
-  recipient_phone: string
-}
+const OrderListItem: React.FC<OrderListItemProps> = ({ order, isSelected, onClick }) => {
+  const statusColors: Record<OrderStatus, string> = {
+    [OrderStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
+    [OrderStatus.CONFIRMED]: 'bg-blue-100 text-blue-800',
+    [OrderStatus.PREPARING]: 'bg-orange-100 text-orange-800',
+    [OrderStatus.READY]: 'bg-purple-100 text-purple-800',
+    [OrderStatus.PICKED_UP]: 'bg-indigo-100 text-indigo-800',
+    [OrderStatus.IN_TRANSIT]: 'bg-cyan-100 text-cyan-800',
+    [OrderStatus.DELIVERED]: 'bg-green-100 text-green-800',
+    [OrderStatus.CANCELLED]: 'bg-red-100 text-red-800',
+  };
 
-interface Order {
-  id: string
-  buyer_id: string
-  store_id: string
-  rider_id?: string
-  items: OrderItem[]
-  subtotal: number
-  delivery_fee: number
-  total: number
-  currency: string
-  status: OrderStatus
-  delivery_info: DeliveryInfo
-  created_at: string
-  delivered_at?: string
-  payment_method: string
-  payment_status: string
-  buyer_notes?: string
-  refund?: RefundInfo
-}
+  return (
+    <div
+      onClick={onClick}
+      className={`
+        p-4 cursor-pointer transition-all duration-200 border-b border-gray-100
+        hover:bg-gray-50
+        ${isSelected ? 'bg-orange-50 border-l-4 border-l-orange-500' : 'border-l-4 border-l-transparent'}
+      `}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-semibold text-gray-900">#{order.id.slice(-6).toUpperCase()}</p>
+          <p className="text-sm text-gray-500">
+            {new Date(order.created_at).toLocaleDateString('en-ZA')}
+          </p>
+        </div>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
+          {order.status}
+        </span>
+      </div>
+      <div className="mt-2 flex items-center justify-between text-sm">
+        <span className="text-gray-600">{order.items.length} items</span>
+        <span className="font-semibold text-gray-900">R{order.total.toFixed(2)}</span>
+      </div>
+    </div>
+  );
+};
 
-interface RefundInfo {
-  id: string
-  order_id: string
-  total_refund_amount: number
-  refund_reason: string
-  customer_explanation: string
-  status: RefundStatus
-  created_at: string
-  deadline: string
-  ai_decision?: string
-  ai_confidence?: number
-  approved_amount?: number
-}
+// Empty state component
+const EmptyState: React.FC<{ onBrowse: () => void }> = ({ onBrowse }) => (
+  <div className="flex flex-col items-center justify-center py-16 px-4">
+    <div className="text-gray-300 mb-4">
+      {icons.empty}
+    </div>
+    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Orders Yet</h3>
+    <p className="text-gray-500 text-center mb-6 max-w-sm">
+      You haven't placed any orders yet. Browse our merchants and place your first order!
+    </p>
+    <button
+      onClick={onBrowse}
+      className="px-6 py-3 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-colors"
+    >
+      Browse Restaurants
+    </button>
+  </div>
+);
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+// Loading state component
+const LoadingState: React.FC = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4" />
+      <p className="text-gray-500">Loading your orders...</p>
+    </div>
+  </div>
+);
 
 export function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'active' | 'past' | 'refunds'>('active')
-  const [refundModalOrder, setRefundModalOrder] = useState<Order | null>(null)
-  const [refunds, setRefunds] = useState<RefundInfo[]>([])
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // State
+  const [orders, setOrders] = useState<OrderWithRealtime[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
 
-  useEffect(() => {
-    fetchOrders()
-    fetchRefunds()
-  }, [])
+  // Get selected order
+  const selectedOrder = orders.find(o => o.id === selectedOrderId) || null;
 
-  const fetchOrders = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE}/orders/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) throw new Error('Failed to fetch orders')
+  // WebSocket tracking for selected order
+  const {
+    order: trackedOrder,
+    isConnected: isOrderConnected,
+    error: orderError,
+  } = useOrderTracking({
+    orderId: selectedOrderId || '',
+    onStatusUpdate: (status, event) => {
+      // Update order in list
+      setOrders(prev => prev.map(o => 
+        o.id === event.order_id 
+          ? { ...o, status, status_history: event.status_history || o.status_history }
+          : o
+      ));
       
-      const data = await response.json()
-      setOrders(data.orders || [])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
+      // Add notification
+      const notification = notificationHelpers.orderStatusUpdate(event.order_id!, status);
+      addNotification(notification);
+    },
+    onLocationUpdate: (location, event) => {
+      // Update order location
+      setOrders(prev => prev.map(o => 
+        o.id === event.order_id 
+          ? { ...o, rider_location: location }
+          : o
+      ));
+    },
+    onDriverAssigned: (driverId, event) => {
+      // Update order with driver info
+      setOrders(prev => prev.map(o => 
+        o.id === event.order_id 
+          ? { 
+              ...o, 
+              rider_id: driverId,
+              rider_name: event.rider_name,
+              rider_phone: event.rider_phone,
+            }
+          : o
+      ));
+      
+      // Add notification
+      const notification = notificationHelpers.driverAssigned(event.order_id!, event.rider_name);
+      addNotification(notification);
+    },
+    onDeliveryComplete: (event) => {
+      // Update order status
+      setOrders(prev => prev.map(o => 
+        o.id === event.order_id 
+          ? { ...o, status: OrderStatus.DELIVERED }
+          : o
+      ));
+      
+      // Add notification
+      const notification = notificationHelpers.deliveryCompleted(event.order_id!);
+      addNotification(notification);
+    },
+  });
 
-  const fetchRefunds = async () => {
+  // User notifications via WebSocket
+  const { notifications: wsNotifications } = useUserNotifications({
+    userId: user?.id || '',
+    onNotification: (event) => {
+      // Handle user-level notifications
+      console.log('User notification:', event);
+    },
+  });
+
+  // Merge WebSocket notifications
+  useEffect(() => {
+    if (wsNotifications.length > 0) {
+      setNotifications(prev => [...prev, ...wsNotifications]);
+    }
+  }, [wsNotifications]);
+
+  // Fetch orders on mount
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // Fetch orders function
+  const fetchOrders = async () => {
+    setIsLoading(true);
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE}/refunds/my-requests`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setRefunds(data || [])
-      }
-    } catch (err) {
-      console.error('Failed to fetch refunds:', err)
+      const response = await ordersAPI.list({ limit: 50 });
+      setOrders(response.data.orders || []);
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleRequestRefund = async (orderId: string) => {
-    const order = orders.find(o => o.id === orderId)
-    if (order) {
-      setRefundModalOrder(order)
-    }
-  }
+  // Add notification helper
+  const addNotification = (notification: Omit<NotificationData, 'id' | 'timestamp'>) => {
+    const newNotification: NotificationData = {
+      ...notification,
+      id: `${Date.now()}-${Math.random()}`,
+      timestamp: Date.now(),
+    };
+    setNotifications(prev => [...prev, newNotification]);
+  };
 
-  const handleTrackOrder = (orderId: string) => {
-    window.location.href = `/track/${orderId}`
-  }
+  // Remove notification
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
-  const submitRefundRequest = async (refundData: RefundRequestData) => {
-    const token = localStorage.getItem('token')
-    const response = await fetch(`${API_BASE}/refunds/request`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(refundData),
-    })
+  // Handle order selection
+  const handleSelectOrder = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setViewMode('detail');
+  };
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || 'Failed to submit refund request')
-    }
+  // Handle back to list
+  const handleBackToList = () => {
+    setSelectedOrderId(null);
+    setViewMode('list');
+  };
 
-    await fetchRefunds()
-  }
+  // Merge tracked order data with list data
+  const displayOrder = trackedOrder || selectedOrder;
 
-  const activeStatuses: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'ready', 'picked_up', 'in_transit']
-  const pastStatuses: OrderStatus[] = ['delivered', 'cancelled']
-
-  const filteredOrders = orders.filter(order => {
-    if (activeTab === 'active') return activeStatuses.includes(order.status)
-    if (activeTab === 'past') return pastStatuses.includes(order.status)
-    return false
-  })
-
-  const tabs = [
-    { id: 'active', label: 'Active', count: orders.filter(o => activeStatuses.includes(o.status)).length },
-    { id: 'past', label: 'Past', count: orders.filter(o => pastStatuses.includes(o.status)).length },
-    { id: 'refunds', label: 'Refunds', count: refunds.length },
-  ] as const
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading orders...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={fetchOrders}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    )
+  if (isLoading) {
+    return <LoadingState />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="p-4">
-          <h1 className="text-xl font-bold text-gray-900">My Orders</h1>
-        </div>
-        
-        {/* Tabs */}
-        <div className="flex border-t">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label}
-              {tab.count > 0 && (
-                <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
-                  activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {tab.count}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {viewMode === 'detail' && (
+                <button
+                  onClick={handleBackToList}
+                  className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  {icons.back}
+                </button>
+              )}
+              <div className="flex items-center gap-2">
+                {icons.orders}
+                <h1 className="text-xl font-bold text-gray-900">
+                  {viewMode === 'list' ? 'My Orders' : 'Order Details'}
+                </h1>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {viewMode === 'list' && (
+                <>
+                  <span className="text-sm text-gray-500">
+                    {orders.length} order{orders.length !== 1 ? 's' : ''}
+                  </span>
+                  <button
+                    onClick={fetchOrders}
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Refresh"
+                  >
+                    {icons.refresh}
+                  </button>
+                </>
+              )}
+              {isOrderConnected && viewMode === 'detail' && (
+                <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  Live
                 </span>
               )}
-            </button>
-          ))}
+            </div>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Content */}
-      <div className="p-4">
-        {activeTab === 'refunds' ? (
-          <div className="space-y-4">
-            {refunds.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z" />
-                  </svg>
-                </div>
-                <p className="text-gray-500">No refund requests</p>
-              </div>
-            ) : (
-              refunds.map(refund => (
-                <RefundStatusCard
-                  key={refund.id}
-                  refund={refund}
-                  onViewDetails={(id) => window.location.href = `/refunds/${id}`}
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        {orders.length === 0 ? (
+          <EmptyState onBrowse={() => navigate('/')} />
+        ) : viewMode === 'list' ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {orders.map(order => (
+              <div
+                key={order.id}
+                onClick={() => handleSelectOrder(order.id)}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+              >
+                <OrderListItem
+                  order={order}
+                  isSelected={false}
+                  onClick={() => handleSelectOrder(order.id)}
                 />
-              ))
-            )}
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="space-y-3">
-            {filteredOrders.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Order List Sidebar */}
+            <div className="hidden lg:block lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-4 border-b border-gray-100">
+                  <h2 className="font-semibold text-gray-900">Recent Orders</h2>
                 </div>
-                <p className="text-gray-500 mb-1">No {activeTab} orders</p>
-                <p className="text-sm text-gray-400">
-                  {activeTab === 'active' ? 'Your active orders will appear here' : 'Your order history will appear here'}
-                </p>
+                <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+                  {orders.map(order => (
+                    <OrderListItem
+                      key={order.id}
+                      order={order}
+                      isSelected={order.id === selectedOrderId}
+                      onClick={() => handleSelectOrder(order.id)}
+                    />
+                  ))}
+                </div>
               </div>
-            ) : (
-              filteredOrders.map(order => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  onRequestRefund={handleRequestRefund}
-                  onTrackOrder={handleTrackOrder}
-                />
-              ))
-            )}
+            </div>
+
+            {/* Order Details */}
+            <div className="lg:col-span-2">
+              <RealTimeOrderTracker
+                order={displayOrder}
+                isConnected={isOrderConnected}
+                error={orderError}
+                onRefresh={() => fetchOrders()}
+              />
+            </div>
           </div>
         )}
-      </div>
+      </main>
 
-      {/* Refund Modal */}
-      {refundModalOrder && (
-        <RefundRequestModal
-          orderId={refundModalOrder.id}
-          items={refundModalOrder.items}
-          onClose={() => setRefundModalOrder(null)}
-          onSubmit={submitRefundRequest}
-        />
-      )}
+      {/* Notification Toast */}
+      <NotificationToast
+        notifications={notifications}
+        onDismiss={removeNotification}
+        position="top-right"
+      />
     </div>
-  )
+  );
 }
+
+export default OrdersPage;

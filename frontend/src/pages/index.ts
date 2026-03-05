@@ -1,8 +1,8 @@
-export { HomePage } from './HomePage'
-export { MerchantPage } from './MerchantPage'
-export { CartPage } from './CartPage'
-export { OrdersPage } from './OrdersPage'
-export { ProfilePage } from './ProfilePage'
-export { RiderDashboard } from './RiderDashboard'
-export { MerchantDashboard } from './MerchantDashboard'
-export { RefundsPage } from './RefundsPage'
+export { default as Home } from './Home';
+export { CartPage } from './CartPage';
+export { MerchantPage } from './MerchantPage';
+export { MerchantDashboard } from './MerchantDashboard';
+export { RiderDashboard } from './RiderDashboard';
+
+// Rewards Pages
+export { RewardsDashboard, ReferralPage } from './rewards';

@@ -1,0 +1,16 @@
+{
+	"telemetryDisabled": false,
+	"cliId": "ddbc29b2-9942-43a5-b07a-ee6b8f0ef71e",
+	"userId": "680f9abdd171770ec9c928e0",
+	"users": {
+		"680f9abdd171770ec9c928e0": {
+			"id": "680f9abdd171770ec9c928e0",
+			"name": "y s",
+			"email": "youngstunnersssssss@gmail.com",
+			"auth": {
+				"token": "nfc_UGzjqA4eaAcUKhLeAvBomqkT3T31e9Pb0b88",
+				"github": {}
+			}
+		}
+	}
+}
