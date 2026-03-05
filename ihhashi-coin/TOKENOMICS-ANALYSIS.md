@@ -1,10 +1,10 @@
-# Hashi Coin Tokenomics Analysis & Recommendation
+# iHhashi Coin Tokenomics Analysis & Recommendation
 
 ## Executive Summary
 
 This analysis proposes a **Stake-to-Earn + Fee-Share + Deflationary** model that aligns incentives across all ecosystem participants while preventing dumping and creating genuine scarcity.
 
-**Core Thesis**: Hashi Coin should not be a reward token—it should be an **ownership stake** in the iHhashi economy. Holders don't just get discounts; they earn from platform activity, similar to owning equity in the platform.
+**Core Thesis**: iHhashi Coin should not be a reward token—it should be an **ownership stake** in the iHhashi economy. Holders don't just get discounts; they earn from platform activity, similar to owning equity in the platform.
 
 ---
 
@@ -111,7 +111,7 @@ Staking Tiers (Minimum 30-day lock):
 - Creates permanent scarcity with every trade
 
 #### Layer 2: Redemption Burn
-- When users redeem Hashi Coins for discounts, 50% is burned
+- When users redeem iHhashi Coins for discounts, 50% is burned
 - Example: Redeem 300 coins for R30 discount → 150 burned, 150 returned to pool
 - Creates deflation tied to actual utility
 
@@ -322,7 +322,7 @@ These bonuses are **identical for early and new users**—rewards activity, not 
 ### 9. IMPLEMENTATION ROADMAP
 
 #### Phase 1: Foundation (Weeks 1-4)
-- [ ] Deploy Hashi Coin on Zora V4
+- [ ] Deploy iHhashi Coin on Zora V4
 - [ ] Set platform referrer to iHhashi treasury
 - [ ] Deploy staking contract (Hashi Vault)
 - [ ] Snapshot for airdrop eligibility
@@ -375,7 +375,7 @@ These bonuses are **identical for early and new users**—rewards activity, not 
 
 ### 12. SUMMARY: THE HASHI SOVEREIGN MODEL
 
-**What makes Hashi Coin PRECIOUS?**
+**What makes iHhashi Coin PRECIOUS?**
 
 1. **Real Fee Sharing**: Not just discounts—actual revenue from trading activity
 2. **Time-Weighted Staking**: Diamond hands earn 2.5x more than paper hands
@@ -387,7 +387,7 @@ These bonuses are **identical for early and new users**—rewards activity, not 
 
 **The Bottom Line:**
 
-Hashi Coin becomes valuable because:
+iHhashi Coin becomes valuable because:
 - **Supply decreases** through burns (deflation)
 - **Demand increases** through utility (discounts + fee share)
 - **Velocity decreases** through staking (time-weighted locks)

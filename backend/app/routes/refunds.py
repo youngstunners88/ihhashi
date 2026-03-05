@@ -16,7 +16,7 @@ from app.models.refund import (
 )
 from app.database import get_database
 
-router = APIRouter(prefix="/refunds", tags=["Refunds & Disputes"])
+router = APIRouter(tags=["Refunds & Disputes"])
 
 
 # ============= REFUND ENDPOINTS =============
@@ -399,6 +399,252 @@ async def get_merchant_pending_refunds(
         "created_at": r["created_at"],
         "ai_decision": r.get("ai_decision"),
         "ai_confidence": r.get("ai_confidence")
+    } for r in refunds]
+
+
+# ============= SUMMARY ENDPOINTS =============
+
+@router.get("/summary/customer", response_model=RefundSummary)
+async def get_customer_refund_summary(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """Get refund summary for customer dashboard"""
+    user_id = str(current_user["_id"])
+    
+    total_requested = await db.refunds.count_documents({"customer_id": user_id})
+    total_approved = await db.refunds.count_documents({
+        "customer_id": user_id,
+        "status": {"$in": [RefundStatus.APPROVED, RefundStatus.COMPLETED]}
+    })
+    total_rejected = await db.refunds.count_documents({
+        "customer_id": user_id,
+        "status": RefundStatus.REJECTED
+    })
+    
+    # Calculate total amount refunded
+    pipeline = [
+        {"$match": {"customer_id": user_id, "status": {"$in": [RefundStatus.APPROVED, RefundStatus.COMPLETED]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$approved_amount"}}}
+    ]
+    result = await db.refunds.aggregate(pipeline).to_list(length=1)
+    total_amount = result[0]["total"] if result else 0.0
+    
+    # Top refund reasons
+    reason_pipeline = [
+        {"$match": {"customer_id": user_id}},
+        {"$group": {"_id": "$refund_reason", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]
+    top_reasons = await db.refunds.aggregate(reason_pipeline).to_list(length=5)
+    
+    # Calculate satisfaction rate
+    satisfaction_rate = (total_approved / total_requested * 100) if total_requested > 0 else 100.0
+    
+    # Average resolution time
+    resolved_pipeline = [
+        {"$match": {"customer_id": user_id, "resolved_at": {"$exists": True}}},
+        {"$project": {
+            "duration": {"$divide": [
+                {"$subtract": ["$resolved_at", "$created_at"]},
+                3600000  # Convert ms to hours
+            ]}
+        }},
+        {"$group": {"_id": None, "avg": {"$avg": "$duration"}}}
+    ]
+    resolved_result = await db.refunds.aggregate(resolved_pipeline).to_list(length=1)
+    avg_resolution_time = resolved_result[0]["avg"] if resolved_result else 0.0
+    
+    return RefundSummary(
+        total_refunds_requested=total_requested,
+        total_refunds_approved=total_approved,
+        total_refunds_rejected=total_rejected,
+        total_amount_refunded=total_amount,
+        average_resolution_time_hours=round(avg_resolution_time, 1),
+        top_refund_reasons=[{"reason": r["_id"], "count": r["count"]} for r in top_reasons],
+        satisfaction_rate=round(satisfaction_rate, 1)
+    )
+
+
+@router.get("/summary/merchant", response_model=RefundSummary)
+async def get_merchant_refund_summary(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """Get refund summary for merchant dashboard"""
+    if current_user.get("user_type") != "merchant":
+        raise HTTPException(status_code=403, detail="Merchants only")
+    
+    merchant_id = str(current_user["_id"])
+    
+    total_requested = await db.refunds.count_documents({"merchant_id": merchant_id})
+    total_approved = await db.refunds.count_documents({
+        "merchant_id": merchant_id,
+        "status": {"$in": [RefundStatus.APPROVED, RefundStatus.COMPLETED]}
+    })
+    total_rejected = await db.refunds.count_documents({
+        "merchant_id": merchant_id,
+        "status": RefundStatus.REJECTED
+    })
+    
+    # Calculate total amount refunded
+    pipeline = [
+        {"$match": {"merchant_id": merchant_id, "status": {"$in": [RefundStatus.APPROVED, RefundStatus.COMPLETED]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$approved_amount"}}}
+    ]
+    result = await db.refunds.aggregate(pipeline).to_list(length=1)
+    total_amount = result[0]["total"] if result else 0.0
+    
+    # Top refund reasons
+    reason_pipeline = [
+        {"$match": {"merchant_id": merchant_id}},
+        {"$group": {"_id": "$refund_reason", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]
+    top_reasons = await db.refunds.aggregate(reason_pipeline).to_list(length=5)
+    
+    # Satisfaction rate (from merchant perspective = low refund rate is good)
+    satisfaction_rate = ((total_requested - total_approved) / total_requested * 100) if total_requested > 0 else 100.0
+    
+    return RefundSummary(
+        total_refunds_requested=total_requested,
+        total_refunds_approved=total_approved,
+        total_refunds_rejected=total_rejected,
+        total_amount_refunded=total_amount,
+        average_resolution_time_hours=0.0,  # Calculate similarly if needed
+        top_refund_reasons=[{"reason": r["_id"], "count": r["count"]} for r in top_reasons],
+        satisfaction_rate=round(satisfaction_rate, 1)
+    )
+
+
+# ============= ADMIN/MODERATOR ENDPOINTS =============
+
+@router.get("/admin/disputes", response_model=List[dict])
+async def get_all_disputes(
+    status: Optional[DisputeStatus] = None,
+    priority: Optional[DisputePriority] = None,
+    limit: int = Query(50, le=200),
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """Get all disputes for admin/moderator review"""
+    if current_user.get("user_type") not in ["admin", "moderator"]:
+        raise HTTPException(status_code=403, detail="Admin or moderator access required")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    if priority:
+        query["priority"] = priority
+    
+    disputes = await db.disputes.find(query).sort("created_at", -1).skip(offset).limit(limit).to_list(length=limit)
+    
+    return [{
+        "id": d["_id"],
+        "refund_id": d.get("refund_id"),
+        "order_id": d["order_id"],
+        "type": d["dispute_type"],
+        "priority": d["priority"],
+        "title": d["title"],
+        "status": d["status"],
+        "customer_id": d["customer_id"],
+        "merchant_id": d.get("merchant_id"),
+        "ai_summary": d.get("ai_summary"),
+        "created_at": d["created_at"],
+        "deadline": d["resolution_deadline"]
+    } for d in disputes]
+
+
+@router.post("/admin/disputes/{dispute_id}/resolve", response_model=dict)
+async def resolve_dispute(
+    dispute_id: str,
+    resolution: str,
+    resolution_type: str,  # "full_refund", "partial_refund", "replacement", "credit", "rejected"
+    compensation_amount: Optional[float] = None,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """Resolve a dispute as admin/moderator"""
+    if current_user.get("user_type") not in ["admin", "moderator"]:
+        raise HTTPException(status_code=403, detail="Admin or moderator access required")
+    
+    dispute = await db.disputes.find_one({"_id": dispute_id})
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Dispute not found")
+    
+    # Update dispute
+    await db.disputes.update_one(
+        {"_id": dispute_id},
+        {
+            "$set": {
+                "status": DisputeStatus.RESOLVED,
+                "resolution": resolution,
+                "resolution_type": resolution_type,
+                "compensation_amount": compensation_amount,
+                "resolved_by": str(current_user["_id"]),
+                "resolved_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    # Update related refund if exists
+    if dispute.get("refund_id"):
+        refund_update = {
+            "status": RefundStatus.COMPLETED,
+            "resolved_by": str(current_user["_id"]),
+            "resolved_at": datetime.utcnow(),
+            "resolution_notes": resolution
+        }
+        if resolution_type in ["full_refund", "partial_refund"] and compensation_amount:
+            refund_update["approved_amount"] = compensation_amount
+        
+        await db.refunds.update_one(
+            {"_id": dispute["refund_id"]},
+            {"$set": refund_update}
+        )
+    
+    return {
+        "message": "Dispute resolved successfully",
+        "dispute_id": dispute_id,
+        "resolution_type": resolution_type
+    }
+
+
+@router.get("/admin/refunds", response_model=List[dict])
+async def get_all_refunds(
+    status: Optional[RefundStatus] = None,
+    limit: int = Query(50, le=200),
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """Get all refunds for admin/moderator review"""
+    if current_user.get("user_type") not in ["admin", "moderator"]:
+        raise HTTPException(status_code=403, detail="Admin or moderator access required")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    refunds = await db.refunds.find(query).sort("created_at", -1).skip(offset).limit(limit).to_list(length=limit)
+    
+    return [{
+        "id": r["_id"],
+        "order_id": r["order_id"],
+        "customer_id": r["customer_id"],
+        "merchant_id": r["merchant_id"],
+        "amount": r["total_refund_amount"],
+        "reason": r["refund_reason"],
+        "status": r["status"],
+        "ai_decision": r.get("ai_decision"),
+        "ai_confidence": r.get("ai_confidence"),
+        "ai_flags": r.get("ai_flags", []),
+        "created_at": r["created_at"],
+        "deadline": r["deadline"],
+        "resolved_at": r.get("resolved_at")
     } for r in refunds]
 
 

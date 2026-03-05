@@ -74,7 +74,7 @@ async def generate_referral_code(
             message = "Share this link with vendors. You get 2 FREE DAYS for each vendor who signs up!"
         else:
             share_link = f"{base_url}/signup?ref={existing['code']}"
-            message = "Share this link with friends. You BOTH earn Hashi Coins!"
+            message = "Share this link with friends. You BOTH earn iHhashi Coins!"
         
         return ReferralCodeResponse(
             code=existing["code"],
@@ -103,7 +103,7 @@ async def generate_referral_code(
         message = "Share this link with vendors. You get 2 FREE DAYS for each vendor who signs up!"
     else:
         share_link = f"{base_url}/signup?ref={code}"
-        message = "Share this link with friends. You BOTH earn Hashi Coins!"
+        message = "Share this link with friends. You BOTH earn iHhashi Coins!"
     
     return ReferralCodeResponse(
         code=code,
@@ -183,7 +183,7 @@ async def apply_referral_code(
             "referral_code": code
         }
     else:
-        # Award Hashi Coins to both parties
+        # Award iHhashi Coins to both parties
         await users_col.update_one(
             {"id": code_record["user_id"]},
             {"$inc": {"hashi_coins": rewards.customer_referrer_coins}}
@@ -195,8 +195,8 @@ async def apply_referral_code(
         
         return {
             "message": "Referral code applied successfully!",
-            "referrer_reward": f"{rewards.customer_referrer_coins} Hashi Coins",
-            "your_welcome_bonus": f"{rewards.customer_referee_coins} Hashi Coins added to your account!",
+            "referrer_reward": f"{rewards.customer_referrer_coins} iHhashi Coins",
+            "your_welcome_bonus": f"{rewards.customer_referee_coins} iHhashi Coins added to your account!",
             "referral_code": code,
             "hashi_coins": rewards.customer_referee_coins
         }
@@ -344,7 +344,7 @@ async def get_customer_rewards(current_user = Depends(get_current_user)):
 
 @router.post("/redeem/free-delivery")
 async def redeem_free_delivery(current_user = Depends(get_current_user)):
-    """Redeem Hashi Coins for a free delivery"""
+    """Redeem iHhashi Coins for a free delivery"""
     rewards = ReferralReward(referral_type=ReferralType.CUSTOMER)
     users_col = get_collection("users")
     
@@ -369,7 +369,7 @@ async def redeem_free_delivery(current_user = Depends(get_current_user)):
         current_balance -= rewards.coins_for_free_delivery
     
     return {
-        "message": f"Redeem {rewards.coins_for_free_delivery} Hashi Coins for free delivery",
+        "message": f"Redeem {rewards.coins_for_free_delivery} iHhashi Coins for free delivery",
         "coins_required": rewards.coins_for_free_delivery,
         "current_balance": current_balance,
         "can_redeem": can_redeem,
@@ -382,7 +382,7 @@ async def redeem_discount(
     amount: int,  # 10 or 25
     current_user = Depends(get_current_user)
 ):
-    """Redeem Hashi Coins for a discount coupon"""
+    """Redeem iHhashi Coins for a discount coupon"""
     rewards = ReferralReward(referral_type=ReferralType.CUSTOMER)
     users_col = get_collection("users")
     
@@ -413,7 +413,7 @@ async def redeem_discount(
         current_balance -= coins_required
     
     return {
-        "message": f"Redeem {coins_required} Hashi Coins for R{discount_value:.2f} discount",
+        "message": f"Redeem {coins_required} iHhashi Coins for R{discount_value:.2f} discount",
         "coins_required": coins_required,
         "discount_amount": discount_value,
         "current_balance": current_balance,

@@ -1,7 +1,7 @@
 /**
- * Hashi Coin - Zora Coins Protocol Integration
+ * iHhashi Coin - Zora Coins Protocol Integration
  * 
- * Creates Hashi Coin on Zora with referral rewards integration.
+ * Creates iHhashi Coin on Zora with referral rewards integration.
  * 
  * REFERRAL REWARDS (Zora V4 - 1% total fee):
  * - Platform Referrer (iHhashi): 20% of total fees FOREVER
@@ -38,7 +38,7 @@ import { base } from "viem/chains";
 // ============================================================================
 
 const HASHI_COIN_CONFIG = {
-  name: "Hashi Coin",
+  name: "iHhashi Coin",
   symbol: "HASHI",
   description: "iHhashi Food Delivery Rewards - Tradeable loyalty tokens for South Africa's favourite delivery platform. Earn through referrals, redeem for discounts and free delivery.",
   
@@ -78,7 +78,7 @@ interface HashiCoinMetadata {
 }
 
 const HASHI_COIN_METADATA: HashiCoinMetadata = {
-  name: "Hashi Coin",
+  name: "iHhashi Coin",
   description: "iHhashi Food Delivery Rewards - Tradeable loyalty tokens for South Africa's favourite delivery platform. Earn through referrals, redeem for discounts and free delivery.",
   image: "ipfs://bafybeihashi-coin-logo", // Will be uploaded
   external_url: "https://ihhashi.com",
@@ -86,7 +86,7 @@ const HASHI_COIN_METADATA: HashiCoinMetadata = {
     category: "Loyalty Token",
     platform: "iHhashi",
     rewards: {
-      referral_bonus: "50 Hashi Coins per referral",
+      referral_bonus: "50 iHhashi Coins per referral",
       redemption_options: [
         "100 coins = Free delivery",
         "150 coins = R15 discount",
@@ -101,7 +101,7 @@ const HASHI_COIN_METADATA: HashiCoinMetadata = {
 // ============================================================================
 
 async function createHashiCoin(privateKey: Hex) {
-  console.log("🚀 Creating Hashi Coin on Zora...\n");
+  console.log("🚀 Creating iHhashi Coin on Zora...\n");
   
   // Set API key if available
   if (HASHI_COIN_CONFIG.zoraApiKey) {
@@ -166,7 +166,7 @@ async function createHashiCoin(privateKey: Hex) {
       publicClient,
     });
     
-    console.log("✅ Hashi Coin created successfully!\n");
+    console.log("✅ iHhashi Coin created successfully!\n");
     console.log("=" .repeat(60));
     console.log("HASHI COIN DEPLOYMENT");
     console.log("=" .repeat(60));
@@ -183,7 +183,7 @@ async function createHashiCoin(privateKey: Hex) {
     
     return result;
   } catch (error: any) {
-    console.error("❌ Failed to create Hashi Coin:", error.message);
+    console.error("❌ Failed to create iHhashi Coin:", error.message);
     throw error;
   }
 }
@@ -193,7 +193,7 @@ async function createHashiCoin(privateKey: Hex) {
 // ============================================================================
 
 async function getHashiCoinCreateCall(creatorAddress: Address) {
-  console.log("🔨 Building Hashi Coin create call...\n");
+  console.log("🔨 Building iHhashi Coin create call...\n");
   
   // Set API key if available
   if (HASHI_COIN_CONFIG.zoraApiKey) {
@@ -235,7 +235,7 @@ async function main() {
   
   if (args.includes("--help") || args.includes("-h")) {
     console.log(`
-Hashi Coin - Zora Coins Protocol Integration
+iHhashi Coin - Zora Coins Protocol Integration
 
 USAGE:
   bun scripts/create-hashi-coin.ts [OPTIONS]
@@ -253,7 +253,7 @@ ENVIRONMENT VARIABLES:
   BASE_RPC_URL          Base RPC URL (default: https://mainnet.base.org)
 
 EXAMPLES:
-  # Create Hashi Coin
+  # Create iHhashi Coin
   bun scripts/create-hashi-coin.ts --private-key 0x...
 
   # Get create call for frontend

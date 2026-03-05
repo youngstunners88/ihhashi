@@ -21,6 +21,17 @@ python-telegram-bot>=21.0
 # Route optimization
 ortools>=9.8.0
 
+# Quantum routing (D-Wave Leap)
+dwave-system>=1.25.0
+dwave-networkx>=0.8.12
+dimod>=0.12.12
+
+# Quantum routing (Qiskit QAOA)
+qiskit>=1.0.0
+qiskit-optimization>=0.6.0
+qiskit-algorithms>=0.3.0
+pyqubo>=1.4.0
+
 # Testing dependencies
 pytest>=8.0.0
 pytest-asyncio>=0.23.0

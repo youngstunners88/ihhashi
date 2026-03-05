@@ -409,7 +409,7 @@ async def get_route_intelligence(
     base_time_seconds = (distance / 1000) * 120  # 2 minutes per km
     
     # Get current hour for time factor
-    current_hour = datetime.utcnow()..hour
+    current_hour = datetime.utcnow().hour
     is_peak = 7 <= current_hour <= 9 or 16 <= current_hour <= 18
     
     # Apply peak hour factor if applicable

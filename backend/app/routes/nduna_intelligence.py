@@ -40,29 +40,21 @@ router = APIRouter(prefix="/nduna-intelligence", tags=["nduna-integration"])
 # COLLECTION HELPERS
 # ============================================================================
 
-def segments_collection():
-    return get_collection("route_segments")
+class COLLECTIONS:
+    """Collection name constants for type-safe access"""
+    SEGMENTS = "route_segments"
+    INSIGHTS = "driver_insights"
+    TIME_RECORDS = "actual_time_records"
+    FEEDBACK = "route_feedback"
+    VALIDATIONS = "insight_validations"
+    REPUTATIONS = "driver_reputations"
+    KNOWLEDGE_POINTS = "knowledge_points"
+    ORDERS = "orders"
 
-def insights_collection():
-    return get_collection("driver_insights")
 
-def time_records_collection():
-    return get_collection("actual_time_records")
-
-def feedback_collection():
-    return get_collection("route_feedback")
-
-def validations_collection():
-    return get_collection("insight_validations")
-
-def reputations_collection():
-    return get_collection("driver_reputations")
-
-def knowledge_points_collection():
-    return get_collection("knowledge_points")
-
-def orders_collection():
-    return get_collection("orders")
+def collection(name: str):
+    """Get a MongoDB collection by name"""
+    return get_collection(name)
 
 
 # ============================================================================
@@ -131,7 +123,7 @@ async def calculate_eta(
     day_factor = get_day_of_week_factor(now.weekday())
     
     # Try to get segment-specific data
-    segments = segments_collection()
+    segments = collection(COLLECTIONS.SEGMENTS)
     
     # Find segments near start and end
     nearby_start = await segments.find({
@@ -168,7 +160,7 @@ async def calculate_eta(
     
     # Apply driver-specific accuracy if available
     if driver_id:
-        time_records = time_records_collection()
+        time_records = collection(COLLECTIONS.TIME_RECORDS)
         
         # Get driver's recent accuracy
         cutoff = datetime.utcnow() - timedelta(days=30)
@@ -248,7 +240,7 @@ async def suggest_best_route(
     primary_eta = await calculate_eta(from_lat, from_lng, to_lat, to_lng)
     
     # Get knowledge points along route
-    knowledge = knowledge_points_collection()
+    knowledge = collection(COLLECTIONS.KNOWLEDGE_POINTS)
     
     # Simple route corridor check (would use proper routing in production)
     corridor_points = await knowledge.find({
@@ -287,8 +279,8 @@ async def suggest_best_route(
             })
     
     # Get validated insights along route
-    insights = insights_collection()
-    validations = validations_collection()
+    insights = collection(COLLECTIONS.INSIGHTS)
+    validations = collection(COLLECTIONS.VALIDATIONS)
     
     validated_insights = []
     async for insight in insights.find({
@@ -348,7 +340,7 @@ async def get_route_alerts(
     to_lng: float
 ) -> list:
     """Get active alerts for a route"""
-    insights = insights_collection()
+    insights = collection(COLLECTIONS.INSIGHTS)
     
     # Find recent, active alerts
     now = datetime.utcnow()
@@ -386,7 +378,7 @@ async def get_nearby_alerts(
     radius_m: float = Query(default=2000)
 ):
     """Get alerts near a location"""
-    insights = insights_collection()
+    insights = collection(COLLECTIONS.INSIGHTS)
     
     now = datetime.utcnow()
     
@@ -430,9 +422,9 @@ async def get_driver_performance(
     days: int = Query(default=30, ge=1, le=90)
 ):
     """Get driver performance analytics"""
-    time_records = time_records_collection()
-    feedback = feedback_collection()
-    reputations = reputations_collection()
+    time_records = collection(COLLECTIONS.TIME_RECORDS)
+    feedback = collection(COLLECTIONS.FEEDBACK)
+    reputations = collection(COLLECTIONS.REPUTATIONS)
     
     cutoff = datetime.utcnow() - timedelta(days=days)
     
@@ -585,36 +577,36 @@ async def get_intelligence_dashboard():
     """Get data for performance analytics dashboard"""
     
     # Total insights
-    total_insights = await insights_collection().count_documents({})
-    validated_insights = await validations_collection().count_documents({
+    total_insights = await collection(COLLECTIONS.INSIGHTS).count_documents({})
+    validated_insights = await collection(COLLECTIONS.VALIDATIONS).count_documents({
         "status": ValidationStatus.CONFIRMED.value
     })
     
     # Active drivers with reputation
-    active_drivers = await reputations_collection().count_documents({
+    active_drivers = await collection(COLLECTIONS.REPUTATIONS).count_documents({
         "total_points": {"$gt": 0}
     })
     
     # Knowledge points
-    total_knowledge = await knowledge_points_collection().count_documents({})
+    total_knowledge = await collection(COLLECTIONS.KNOWLEDGE_POINTS).count_documents({})
     
     # Recent activity (last 7 days)
     cutoff = datetime.utcnow() - timedelta(days=7)
     
-    recent_time_records = await time_records_collection().count_documents({
+    recent_time_records = await collection(COLLECTIONS.TIME_RECORDS).count_documents({
         "created_at": {"$gte": cutoff}
     })
     
-    recent_insights = await insights_collection().count_documents({
+    recent_insights = await collection(COLLECTIONS.INSIGHTS).count_documents({
         "created_at": {"$gte": cutoff}
     })
     
-    recent_feedback = await feedback_collection().count_documents({
+    recent_feedback = await collection(COLLECTIONS.FEEDBACK).count_documents({
         "created_at": {"$gte": cutoff}
     })
     
     # Top contributors
-    top_drivers = await reputations_collection().find().sort("total_points", -1).limit(5).to_list(length=5)
+    top_drivers = await collection(COLLECTIONS.REPUTATIONS).find().sort("total_points", -1).limit(5).to_list(length=5)
     
     for driver in top_drivers:
         driver["id"] = str(driver["_id"])
@@ -839,9 +831,9 @@ async def get_estimated_savings(
 @router.get("/health")
 async def health_check():
     """Check Nduna integration status"""
-    segments_count = await segments_collection().count_documents({})
-    insights_count = await insights_collection().count_documents({})
-    time_records_count = await time_records_collection().count_documents({})
+    segments_count = await collection(COLLECTIONS.SEGMENTS).count_documents({})
+    insights_count = await collection(COLLECTIONS.INSIGHTS).count_documents({})
+    time_records_count = await collection(COLLECTIONS.TIME_RECORDS).count_documents({})
     
     # Check if OR-Tools is available
     ortools_available = False

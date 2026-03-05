@@ -189,16 +189,16 @@ Delivery platform for South Africa, inspired by Ele.me.
 - **Tracking**: Referrals tracked in AccountRecord model
 - **API**: `/api/v1/referrals/*` and `/api/v1/vendors/apply`
 
-### Customer Hashi Coins Rewards (v0.4.0)
-- **Virtual Currency**: "Hashi Coins" earned through referrals and activity
+### Customer iHhashi Coins Rewards (v0.4.0)
+- **Virtual Currency**: "iHhashi Coins" earned through referrals and activity
 - **Referral Rewards**:
-  - Referrer: 50 Hashi Coins per successful referral
-  - New customer: 25 Hashi Coins welcome bonus
+  - Referrer: 50 iHhashi Coins per successful referral
+  - New customer: 25 iHhashi Coins welcome bonus
 - **Redemption Options**:
   - 100 coins = Free delivery
   - 150 coins = R15 discount
   - 300 coins = R30 discount
-- **Coin Value**: 1 Hashi Coin = 10 cents (R0.10)
+- **Coin Value**: 1 iHhashi Coin = 10 cents (R0.10)
 
 ### Customer Tier System (v0.4.0)
 Based on successful referrals:
@@ -217,7 +217,7 @@ Based on successful referrals:
 - `Referral` - Referral tracking records
 - `VendorReferralStats` - Vendor referral statistics
 - `CustomerRewardAccount` - Customer rewards and tier tracking
-- `CoinTransaction` - Hashi Coin transaction history
+- `CoinTransaction` - iHhashi Coin transaction history
 - `RewardRedemption` - Reward redemption records
 
 ---
@@ -293,6 +293,122 @@ A driver knowledge capture and intelligence system for improved ETAs and route s
 | `GET /api/v1/nduna-intelligence/suggest-route` | Get best route suggestions |
 | `GET /api/v1/community/reputation/{driver_id}` | Get driver reputation |
 | `GET /api/v1/pricing-intelligence/report` | Get pricing intelligence report |
+
+---
+
+## 💰 REFUNDS & DISPUTES FRONTEND (v0.5.0)
+
+### Overview
+Complete customer-facing refund system integrated with South African Consumer Protection Act (CPA) compliance.
+
+### Components Created
+
+| Component | Purpose |
+|-----------|---------|
+| `OrderCard` | Display order with expandable details, status badges, and refund/track actions |
+| `RefundRequestModal` | Multi-item refund selection with reason, explanation, and evidence upload |
+| `RefundStatusCard` | Track refund status with AI decision display and deadline countdown |
+| `OrdersPage` | Tab-based view (Active/Past/Refunds) with full order management |
+
+### Features
+- **Order History**: View all orders with status filtering
+- **Refund Request**: Select specific items for partial or full refund
+- **CPA Compliance**: 10 business day deadline enforcement displayed
+- **AI Moderation**: Shows AI recommendation and confidence score
+- **Evidence Upload**: Support for photo/document URLs
+- **Status Tracking**: Real-time refund status with color-coded badges
+
+### File Locations
+- `frontend/src/components/order/OrderCard.tsx`
+- `frontend/src/components/order/RefundRequestModal.tsx`
+- `frontend/src/components/order/RefundStatusCard.tsx`
+- `frontend/src/pages/OrdersPage.tsx`
+- `frontend/src/types/order.ts`
+
+### Next Steps
+- [ ] Add refund details page (`/refunds/:id`)
+- [ ] Add merchant refund management view
+- [ ] Add push notifications for refund status changes
+- [ ] Integrate with actual evidence file upload (currently URL-based)
+
+---
+
+## 🚀 QUANTUM DISPATCH SYSTEM (v0.5.0)
+
+### Overview
+Quantum-enhanced route optimization using D-Wave Leap API for quantum annealing.
+
+### Features
+- **Quantum Route Optimization**: Uses D-Wave hybrid solvers for CVRP
+- **A/B Testing**: Compare quantum vs classical routing performance
+- **Automatic Fallback**: Falls back to OR-Tools if quantum unavailable
+- **Statistics Dashboard**: Track quantum win rates and improvements
+
+### Key Files
+- `backend/app/services/quantum_dispatch.py` - Quantum dispatcher service
+- `backend/app/routes/quantum_dispatch.py` - API endpoints
+- `docs/QUANTUM_DISPATCH_SETUP.md` - Setup guide
+
+### API Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v1/quantum-dispatch/status` | Check quantum configuration |
+| `POST /api/v1/quantum-dispatch/optimize` | Optimize route with quantum |
+| `POST /api/v1/quantum-dispatch/ab-test` | Run A/B test comparison |
+| `GET /api/v1/quantum-dispatch/stats` | Get A/B test statistics |
+| `POST /api/v1/quantum-dispatch/batch-ab-test` | Run multiple tests |
+
+### Performance Benchmarks
+Based on industry studies:
+- UPS + IonQ: 24% better routing
+- Amazon + Zapata AI: Significant improvements
+- DHL + Rigetti: 31% improvement
+
+### Setup
+1. Sign up at https://cloud.dwavesys.com/leap/ (free tier: 1 min QPU/month)
+2. Get API token from https://cloud.dwavesys.com/leap/api/
+3. Set `DWAVE_API_TOKEN` environment variable
+4. Restart backend
+
+See `docs/QUANTUM_DISPATCH_SETUP.md` for detailed instructions.
+
+---
+
+## ✅ FEATURES IMPLEMENTED (v0.6.0)
+
+### Refund System - Frontend (v0.6.0)
+- **RefundRequestModal Component**: 2-step modal for requesting refunds
+  - Step 1: Select items to refund
+  - Step 2: Choose reason, add explanation, upload evidence
+  - Validates minimum 10 characters for explanation
+  - Shows refund total calculation
+- **RefundStatusCard Component**: Display refund status with:
+  - Color-coded status badges
+  - AI decision display with confidence score
+  - Resolution notes
+  - Days remaining until deadline (CPA compliance)
+  - Actions: Add Evidence, Open Dispute
+- **RefundsPage Component**: Dashboard for viewing all refunds
+  - Summary cards (Total, Pending, Approved, Rejected)
+  - Filter by status
+  - CPA rights notice
+- **Integration**: Orders.tsx updated with:
+  - "Request Refund" button for delivered orders
+  - RefundRequestModal integration
+  - API submission handler
+
+### Refund System - Backend (Already Complete)
+- Models: `refund.py` (CPA compliant)
+- API endpoints: `/api/v1/refunds/*`
+- AI moderation with fraud detection
+- Dispute escalation support
+
+### Key Files
+- `frontend/src/components/order/RefundRequestModal.tsx`
+- `frontend/src/components/order/RefundStatusCard.tsx`
+- `frontend/src/pages/RefundsPage.tsx`
+- `frontend/src/pages/orders/Orders.tsx` (updated)
 
 ---
 

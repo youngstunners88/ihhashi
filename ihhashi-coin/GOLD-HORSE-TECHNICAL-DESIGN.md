@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document outlines the technical implementation for integrating **Gold Horse status** (100K+ Hashi Coin holders) with the existing **Blue Horse verification system**, leveraging Zora V4's on-chain capabilities while building custom incentive mechanisms.
+This document outlines the technical implementation for integrating **Gold Horse status** (100K+ iHhashi Coin holders) with the existing **Blue Horse verification system**, leveraging Zora V4's on-chain capabilities while building custom incentive mechanisms.
 
 ---
 
@@ -121,7 +121,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title HashiVault
- * @notice Time-weighted staking for Hashi Coin with Gold Horse status tracking
+ * @notice Time-weighted staking for iHhashi Coin with Gold Horse status tracking
  */
 contract HashiVault is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
 ## 8. Implementation Roadmap
 
 ### Phase 1: Foundation (Weeks 1-2)
-- [ ] Deploy Hashi Coin on Zora V4
+- [ ] Deploy iHhashi Coin on Zora V4
 - [ ] Set up blockchain indexer service
 - [ ] Create HashiVault contract (staking)
 - [ ] Add wallet connection to mobile app

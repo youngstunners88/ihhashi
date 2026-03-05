@@ -1,4 +1,4 @@
-# Hashi Coin - Launch Checklist
+# iHhashi Coin - Launch Checklist
 
 ## Pre-Launch
 
@@ -21,7 +21,7 @@ IHHASHI_CREATOR=0xCreatorAddress
 BASE_RPC_URL=https://mainnet.base.org
 ```
 
-## Deploy Hashi Coin
+## Deploy iHhashi Coin
 
 ```bash
 cd /home/workspace/iHhashi/hashi-coin
@@ -72,7 +72,7 @@ Assuming $100,000 monthly trading volume:
 
 ## Next Steps
 
-1. Deploy Hashi Coin
+1. Deploy iHhashi Coin
 2. Add liquidity (optional - initial liquidity provided by Zora)
 3. Build frontend integration
 4. Launch marketing campaign

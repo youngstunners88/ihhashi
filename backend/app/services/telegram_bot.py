@@ -120,7 +120,7 @@ class TelegramBotService:
                 ],
                 "buyer_id": str(user["_id"])
             })
-        except:
+        except Exception:
             order = await self.db.orders.find_one({
                 "order_number": order_id,
                 "buyer_id": str(user["_id"])

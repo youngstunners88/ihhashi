@@ -68,7 +68,7 @@ class ConnectionManager:
         for connection in self.order_connections[order_id]:
             try:
                 await connection.send_json(message)
-            except:
+            except Exception:
                 dead_connections.add(connection)
         
         # Clean up dead connections
@@ -80,7 +80,7 @@ class ConnectionManager:
         if rider_id in self.rider_connections:
             try:
                 await self.rider_connections[rider_id].send_json(message)
-            except:
+            except Exception:
                 self.disconnect_rider(rider_id)
     
     async def send_to_user(self, user_id: str, message: dict):
@@ -88,7 +88,7 @@ class ConnectionManager:
         if user_id in self.user_connections:
             try:
                 await self.user_connections[user_id].send_json(message)
-            except:
+            except Exception:
                 self.disconnect_user(user_id)
     
     async def update_rider_location(self, rider_id: str, lat: float, lng: float, order_id: Optional[str] = None):

@@ -7,6 +7,11 @@ from app.models.trip import Trip, TripCreate, TripStatus
 from app.models.delivery import Delivery, DeliveryCreate
 from app.models.verification import Verification, VerificationStatus
 from app.models.account import AccountRecord, AccountStatus, UserWarning, WarningType
+from app.models.refund import (
+    Refund, RefundRequest, RefundStatus, RefundReason, RefundEvidence, RefundItem,
+    Dispute, DisputeStatus, DisputePriority, DisputeType, DisputeMessage,
+    ModerationDecision, ModerationAction, RefundSummary, DisputeSummary
+)
 
 __all__ = [
     # User
@@ -57,4 +62,20 @@ __all__ = [
     "AccountStatus",
     "UserWarning",
     "WarningType",
+    # Refund & Dispute
+    "Refund",
+    "RefundRequest",
+    "RefundStatus",
+    "RefundReason",
+    "RefundEvidence",
+    "RefundItem",
+    "Dispute",
+    "DisputeStatus",
+    "DisputePriority",
+    "DisputeType",
+    "DisputeMessage",
+    "ModerationDecision",
+    "ModerationAction",
+    "RefundSummary",
+    "DisputeSummary",
 ]

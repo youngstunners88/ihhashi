@@ -73,7 +73,7 @@ class CustomerReferralStats(BaseModel):
     completed_referrals: int = 0
     pending_referrals: int = 0
     
-    # Hashi Coins (virtual currency)
+    # iHhashi Coins (virtual currency)
     hashi_coins_balance: int = 0
     hashi_coins_earned: int = 0
     hashi_coins_spent: int = 0
@@ -101,8 +101,8 @@ class ReferralReward(BaseModel):
     vendor_max_bonus_days: int = 90  # Max 90 extra days (3 months)
     
     # Customer rewards (both parties get rewards)
-    customer_referrer_coins: int = 50  # Hashi Coins for referrer
-    customer_referee_coins: int = 25   # Hashi Coins for new user
+    customer_referrer_coins: int = 50  # iHhashi Coins for referrer
+    customer_referee_coins: int = 25   # iHhashi Coins for new user
     
     # Tier thresholds
     tier_bronze_min: int = 1

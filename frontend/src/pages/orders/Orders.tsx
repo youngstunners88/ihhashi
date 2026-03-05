@@ -1,9 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Package, Clock, CheckCircle, Truck, MapPin, Loader2, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Package, Clock, CheckCircle, Truck, MapPin, Loader2, RefreshCw, RotateCcw } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../App'
 import { ordersAPI } from '../../lib/api'
+import { RefundRequestModal } from '../../components/order/RefundRequestModal'
+import { RefundItem, RefundReason } from '../../types/order'
 
 const statusConfig: Record<string, { label: string; color: string; icon: any; description: string }> = {
   pending:    { label: 'Pending',      color: 'text-yellow-700 bg-yellow-50 border-yellow-200',   icon: Clock,        description: 'Waiting for merchant to confirm' },
@@ -22,6 +24,8 @@ export default function Orders() {
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const isNewOrder = searchParams.get('new') === '1'
+  const [showRefundModal, setShowRefundModal] = useState(false)
+  const [refundOrderId, setRefundOrderId] = useState<string | null>(null)
 
   // If not authenticated, redirect to auth
   useEffect(() => {
@@ -43,6 +47,35 @@ export default function Orders() {
     enabled: !orderId && isAuthenticated,
     staleTime: 30_000,
   })
+
+  const handleRequestRefund = (orderId: string) => {
+    setRefundOrderId(orderId)
+    setShowRefundModal(true)
+  }
+
+  const handleSubmitRefund = async (refundData: {
+    items: RefundItem[]
+    reason: RefundReason
+    explanation: string
+    evidenceUrls: string[]
+  }) => {
+    const response = await fetch('/api/v1/refunds/request', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({
+        order_id: refundOrderId,
+        refund_items: refundData.items,
+        refund_reason: refundData.reason,
+        customer_explanation: refundData.explanation,
+        evidence_urls: refundData.evidenceUrls,
+      }),
+    })
+    if (!response.ok) throw new Error('Failed to submit refund request')
+    return response.json()
+  }
 
   // ─── Single Order Detail ────────────────────────────────────────────────────
   if (orderId) {
@@ -148,7 +181,28 @@ export default function Orders() {
               </p>
             </div>
           )}
+
+          {/* Request Refund Button - for delivered orders */}
+          {order.status === 'delivered' && order.payment_status !== 'refunded' && (
+            <button
+              onClick={() => handleRequestRefund(order.id)}
+              className="w-full bg-gray-100 text-gray-700 rounded-xl p-4 flex items-center justify-center gap-2 hover:bg-gray-200 transition font-medium"
+            >
+              <RotateCcw className="w-5 h-5" />
+              Request Refund
+            </button>
+          )}
         </div>
+
+        {/* Refund Request Modal */}
+        {showRefundModal && refundOrderId === order.id && (
+          <RefundRequestModal
+            orderId={order.id}
+            items={order.items ?? []}
+            onClose={() => setShowRefundModal(false)}
+            onSubmit={handleSubmitRefund}
+          />
+        )}
       </div>
     )
   }

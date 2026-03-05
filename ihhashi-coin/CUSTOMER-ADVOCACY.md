@@ -1,4 +1,4 @@
-# Hashi Coin: Customer Incentive Model Analysis
+# iHhashi Coin: Customer Incentive Model Analysis
 
 **Author:** Customer Advocate (Zo)  
 **Date:** 2026-03-02  
@@ -8,19 +8,19 @@
 
 ## Executive Summary
 
-The current 100,000 Hashi Coin threshold for Gold Horse status is **too high** for regular customers. At R0.10 per coin, that's R10,000 (≈$550 USD) — beyond the reach of most South African consumers. We need a **tiered approach** with achievable milestones that create psychological ownership and FOMO (fear of missing out).
+The current 100,000 iHhashi Coin threshold for Gold Horse status is **too high** for regular customers. At R0.10 per coin, that's R10,000 (≈$550 USD) — beyond the reach of most South African consumers. We need a **tiered approach** with achievable milestones that create psychological ownership and FOMO (fear of missing out).
 
 ---
 
-## 1. Why Would a Regular Person Hold Hashi Coins?
+## 1. Why Would a Regular Person Hold iHhashi Coins?
 
 ### The Core Problem
 Most loyalty points are seen as "free money to spend" — users accumulate and immediately redeem. There's no holding pressure because the points have no market value and no appreciation potential.
 
-### The Hashi Coin Difference
-Hashi Coins are **tradeable** on Zora. This creates a fundamental shift:
+### The iHhashi Coin Difference
+iHhashi Coins are **tradeable** on Zora. This creates a fundamental shift:
 
-| Traditional Points | Hashi Coins |
+| Traditional Points | iHhashi Coins |
 |-------------------|-------------|
 | Zero market value | Real market value (can sell for ETH) |
 | Issued by company | On-chain, transparent supply |
@@ -31,7 +31,7 @@ Hashi Coins are **tradeable** on Zora. This creates a fundamental shift:
 ### Why Hold Instead of Redeem?
 
 **1. Speculative Upside**
-- "What if Hashi Coin goes from R0.10 to R1.00? My 500 coins become R500!"
+- "What if iHhashi Coin goes from R0.10 to R1.00? My 500 coins become R500!"
 - This is the crypto-native hook — FOMO on potential appreciation
 
 **2. Status Benefits (Non-Financial)**
@@ -122,23 +122,23 @@ Hashi Coins are **tradeable** on Zora. This creates a fundamental shift:
 ## 4. Referral Integration: Earning Coins + Trading Fees
 
 ### Current System (Web2)
-- Referrer: 50 Hashi Coins per referral
-- New customer: 25 Hashi Coins welcome bonus
+- Referrer: 50 iHhashi Coins per referral
+- New customer: 25 iHhashi Coins welcome bonus
 
 ### Proposed Enhanced System (Web2 + Web3)
 
 **Level 1: Basic Referral (No Wallet Required)**
-- Referrer earns 50 Web2 Hashi Coins
-- New customer gets 25 Web2 Hashi Coins
+- Referrer earns 50 Web2 iHhashi Coins
+- New customer gets 25 Web2 iHhashi Coins
 - Works exactly like current system
 
 **Level 2: On-Chain Referral (Wallet Required)**
-- Referrer earns 50 Web2 Hashi Coins + becomes **Trade Referrer** on Zora
-- When the new customer buys Hashi Coins on Zora, referrer earns 4% of trading fees
+- Referrer earns 50 Web2 iHhashi Coins + becomes **Trade Referrer** on Zora
+- When the new customer buys iHhashi Coins on Zora, referrer earns 4% of trading fees
 - This creates **ongoing passive income** — not just a one-time bonus
 
 **Level 3: Merchant/Delivery Serviceman Referral**
-- When a customer refers a merchant or delivery serviceman who then buys Hashi Coins
+- When a customer refers a merchant or delivery serviceman who then buys iHhashi Coins
 - Customer earns 4% of ALL their trading fees forever
 - This is the "Golden Ticket" — if you refer a popular merchant who trades heavily, you earn perpetually
 
@@ -146,15 +146,15 @@ Hashi Coins are **tradeable** on Zora. This creates a fundamental shift:
 
 ```
 Customer A refers Customer B:
-- Customer A gets 50 Hashi Coins (Web2)
-- Customer B gets 25 Hashi Coins (Web2)
+- Customer A gets 50 iHhashi Coins (Web2)
+- Customer B gets 25 iHhashi Coins (Web2)
 
-Customer B decides to buy R1000 of Hashi Coins on Zora:
+Customer B decides to buy R1000 of iHhashi Coins on Zora:
 - Trading fee (1%): R10
 - Trade Referrer (Customer A) earns: R0.40 (4% of R10)
 - iHhashi earns: R2.00 (20% of R10)
 
-Customer B later sells R2000 of Hashi Coins:
+Customer B later sells R2000 of iHhashi Coins:
 - Trading fee (1%): R20
 - Trade Referrer (Customer A) earns: R0.80 (4% of R20)
 - Customer A didn't do anything extra, but earned R1.20 total
@@ -166,8 +166,8 @@ If Customer B becomes a regular trader, Customer A earns passively forever.
 
 | Rank | Monthly Reward |
 |------|---------------|
-| Top 10 referrers | 500 bonus Hashi Coins |
-| Top 100 referrers | 100 bonus Hashi Coins |
+| Top 10 referrers | 500 bonus iHhashi Coins |
+| Top 100 referrers | 100 bonus iHhashi Coins |
 | 5+ referrals/month | "Super Recruiter" badge |
 
 ---
@@ -178,22 +178,22 @@ If Customer B becomes a regular trader, Customer A earns passively forever.
 
 | Streak | Reward |
 |--------|--------|
-| 7-day login streak | 5 Hashi Coins |
-| 30-day login streak | 25 Hashi Coins + "Consistent Customer" badge |
-| 10 orders in a month | 50 Hashi Coins |
-| 50 orders total | 100 Hashi Coins + "Loyal Customer" badge |
+| 7-day login streak | 5 iHhashi Coins |
+| 30-day login streak | 25 iHhashi Coins + "Consistent Customer" badge |
+| 10 orders in a month | 50 iHhashi Coins |
+| 50 orders total | 100 iHhashi Coins + "Loyal Customer" badge |
 
 ### Challenges & Quests
 
 **Weekly Challenges:**
-- "Try 3 new vendors this week" → 20 Hashi Coins
-- "Order from 5 different cuisine types" → 30 Hashi Coins
-- "Rate 5 deliveries" → 10 Hashi Coins
+- "Try 3 new vendors this week" → 20 iHhashi Coins
+- "Order from 5 different cuisine types" → 30 iHhashi Coins
+- "Rate 5 deliveries" → 10 iHhashi Coins
 
 **Monthly Quests:**
-- "Order every week this month" → 50 Hashi Coins
-- "Spend R500 in a month" → 75 Hashi Coins
-- "Refer 2 friends who order" → 100 Hashi Coins
+- "Order every week this month" → 50 iHhashi Coins
+- "Spend R500 in a month" → 75 iHhashi Coins
+- "Refer 2 friends who order" → 100 iHhashi Coins
 
 ### Badges & Achievements
 
@@ -210,13 +210,13 @@ If Customer B becomes a regular trader, Customer A earns passively forever.
 ### Seasonal Events
 
 **Hashi Hunt (Monthly):**
-- Hidden "Hashi Coins" in the app (Easter egg style)
-- Find 10 coins = 100 Hashi Coins bonus
+- Hidden "iHhashi Coins" in the app (Easter egg style)
+- Find 10 coins = 100 iHhashi Coins bonus
 - Creates engagement and app exploration
 
 **Loyalty Lottery (Quarterly):**
-- Every 100 Hashi Coins held = 1 lottery ticket
-- Prize pool: 10,000 Hashi Coins + premium status upgrades
+- Every 100 iHhashi Coins held = 1 lottery ticket
+- Prize pool: 10,000 iHhashi Coins + premium status upgrades
 - Creates holding pressure (more coins = more chances)
 
 ---
@@ -259,9 +259,9 @@ If coins are too easy to sell, everyone dumps. We need reasons to HOLD.
 
 ```
 Day 1: Sign up
-├── Welcome bonus: 25 Hashi Coins (Web2)
-├── Tutorial completion: 5 Hashi Coins
-└── First order bonus: 10 Hashi Coins
+├── Welcome bonus: 25 iHhashi Coins (Web2)
+├── Tutorial completion: 5 iHhashi Coins
+└── First order bonus: 10 iHhashi Coins
 
 Week 1:
 ├── Daily login: 1 coin/day × 7 = 7 coins
@@ -319,7 +319,7 @@ This creates the **virtuous cycle**: Earn → Hold → Refer → Earn More → H
 - [ ] Create tiered status system (Brown Pony → Diamond Unicorn)
 - [ ] Implement status-based benefits
 - [ ] Add basic gamification (daily login, order streaks)
-- [ ] Launch Hashi Coin on Zora
+- [ ] Launch iHhashi Coin on Zora
 
 ### Phase 2: Engagement (v0.6.0)
 - [ ] Weekly challenges and monthly quests
@@ -366,7 +366,7 @@ This creates the **virtuous cycle**: Earn → Hold → Refer → Earn More → H
 
 ## Conclusion
 
-**The key insight**: For customers to HOLD Hashi Coins, they need **multiple compelling reasons**:
+**The key insight**: For customers to HOLD iHhashi Coins, they need **multiple compelling reasons**:
 
 1. **Utility** — Discounts and free delivery (immediate value)
 2. **Status** — Tiers with exclusive benefits (social proof)

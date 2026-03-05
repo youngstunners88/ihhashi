@@ -58,11 +58,10 @@ export function HomePage() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log('Location:', position.coords)
           // Reverse geocode to get address
         },
         (error) => {
-          console.log('Location error:', error)
+          // Location permission denied or unavailable
         }
       )
     }

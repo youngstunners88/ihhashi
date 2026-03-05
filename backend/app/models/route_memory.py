@@ -383,4 +383,3 @@ class RouteIntelligence(BaseModel):
                 ]
             }
         }
-EOF

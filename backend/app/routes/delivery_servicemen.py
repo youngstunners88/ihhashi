@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Form
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime, timedelta
 from app.services.auth import get_current_user
 from app.models.verification import (
@@ -45,7 +45,7 @@ class PricingUpdate(BaseModel):
 async def apply_as_serviceman(
     application: DeliveryServicemanApplication,
     current_user = Depends(get_current_user)
-):
+) -> dict[str, Any]:
     """Apply to become a delivery serviceman - starts 45-day free trial"""
     trial_ends = datetime.utcnow() + timedelta(days=settings.free_trial_days)
     
@@ -97,7 +97,7 @@ async def apply_as_serviceman(
 async def update_pricing(
     pricing: PricingUpdate,
     current_user = Depends(get_current_user)
-):
+) -> dict[str, Any]:
     """Update your delivery pricing - you set your own rates!"""
     return {
         "message": "Pricing updated successfully",
@@ -114,7 +114,7 @@ async def update_pricing(
 
 
 @router.get("/verification-status")
-async def get_verification_status(current_user = Depends(get_current_user)):
+async def get_verification_status(current_user = Depends(get_current_user)) -> dict[str, Any]:
     """Get current verification status for Blue Horse badge"""
     return {
         "serviceman_id": current_user.id,
@@ -138,7 +138,7 @@ async def get_verification_status(current_user = Depends(get_current_user)):
 
 
 @router.get("/account-status")
-async def get_account_status(current_user = Depends(get_current_user)):
+async def get_account_status(current_user = Depends(get_current_user)) -> dict[str, Any]:
     """Get account status including trial and warnings"""
     return {
         "user_id": current_user.id,
@@ -157,7 +157,7 @@ async def get_account_status(current_user = Depends(get_current_user)):
 
 
 @router.get("/earnings")
-async def get_earnings(current_user = Depends(get_current_user)):
+async def get_earnings(current_user = Depends(get_current_user)) -> dict[str, Any]:
     """Get earnings summary - tips have 0% platform fee"""
     return {
         "total_earnings": 0,
@@ -171,7 +171,7 @@ async def get_earnings(current_user = Depends(get_current_user)):
 
 
 @router.post("/online")
-async def go_online(current_user = Depends(get_current_user)):
+async def go_online(current_user = Depends(get_current_user)) -> dict[str, Any]:
     """Go online to accept delivery requests"""
     return {
         "message": "You are now online",
@@ -180,7 +180,7 @@ async def go_online(current_user = Depends(get_current_user)):
 
 
 @router.post("/offline")
-async def go_offline(current_user = Depends(get_current_user)):
+async def go_offline(current_user = Depends(get_current_user)) -> dict[str, Any]:
     """Go offline - stop receiving delivery requests"""
     return {
         "message": "You are now offline",

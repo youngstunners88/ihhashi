@@ -10,8 +10,12 @@ Inspired by Ele.me, built for Mzansi. 🇿🇦
 - 🛒 **Groceries** - Supermarkets, spaza shops
 - 🥬 **Fresh Produce** - Fruits & vegetables
 - 📦 **Courier Services** - Packages, documents, parcels
-- 🚗 **Multi-Modal Delivery** - Car, motorcycle, scooter, bicycle, on-foot
+- 🚗 **Multi-Modal Delivery** - Car, motorcycle, scooter, bicycle, on-foot, wheelchair, rollerblade
 - 🔵 **Blue Horse Verification** - Trust system for vendors and delivery partners
+- 🪙 **iHhashi Coins** - Customer rewards and referral bonuses
+- 🤖 **Nduna Intelligence** - AI-powered ETA and route optimization
+- 🗺️ **Route Memory** - Driver knowledge capture for better ETAs
+- 🏆 **Community** - Driver reputation and badges
 - 🇿🇦 **South African** - All 9 provinces, ZAR currency, local languages
 
 ## Tech Stack
@@ -77,9 +81,23 @@ docker-compose down
 ihhashi/
 ├── backend/
 │   ├── app/
-│   │   ├── api/           # API routes
 │   │   ├── models/        # Database models
-│   │   ├── routes/        # Route handlers
+│   │   │   ├── account.py        # Warning/suspension system
+│   │   │   ├── buyer.py          # Buyer model
+│   │   │   ├── community.py      # Driver reputation, badges
+│   │   │   ├── customer_rewards.py # Hashi Coins, tiers
+│   │   │   ├── delivery.py       # Multi-modal delivery, tipping
+│   │   │   ├── driver.py         # Driver model
+│   │   │   ├── order.py          # Order model
+│   │   │   ├── pricing_intelligence.py # Pricing analytics
+│   │   │   ├── product.py        # Product model
+│   │   │   ├── referral.py       # Referral system
+│   │   │   ├── refund.py         # Refund processing
+│   │   │   ├── route_memory.py   # Driver route knowledge
+│   │   │   ├── trip.py           # Trip tracking
+│   │   │   ├── user.py           # User model
+│   │   │   └── verification.py   # Blue Horse verification
+│   │   ├── routes/        # API endpoints (see API section)
 │   │   ├── schemas/       # Pydantic schemas
 │   │   ├── services/      # Business logic
 │   │   └── middleware/    # Rate limiting, security
@@ -93,12 +111,30 @@ ihhashi/
 │   ├── src/
 │   │   ├── components/    # React components
 │   │   ├── pages/         # Page components
+│   │   │   ├── Home.tsx           # Main home page
+│   │   │   ├── HomePage.tsx       # Alternative home page
+│   │   │   ├── CartPage.tsx       # Shopping cart
+│   │   │   ├── MerchantPage.tsx   # Merchant view
+│   │   │   ├── MerchantDashboard.tsx # Merchant dashboard
+│   │   │   ├── RiderDashboard.tsx # Rider dashboard
+│   │   │   ├── OrdersPage.tsx     # Orders page
+│   │   │   ├── ProfilePage.tsx    # Profile page
+│   │   │   ├── auth/Auth.tsx      # Authentication
+│   │   │   ├── catalog/Products.tsx # Product catalog
+│   │   │   ├── admin/             # Admin pages
+│   │   │   ├── cart/              # Cart components
+│   │   │   ├── orders/            # Order pages
+│   │   │   └── profile/           # Profile pages
 │   │   ├── hooks/         # Custom hooks
 │   │   ├── lib/           # API client, utilities
 │   │   └── styles/        # CSS/Tailwind
 │   ├── public/
 │   ├── package.json
 │   └── Dockerfile
+├── assets/
+│   └── nduna/             # Nduna bot assets
+├── content/
+│   └── marketing/         # Marketing content
 ├── deployment/
 │   ├── vercel.json        # Vercel configuration
 │   ├── render.yaml        # Render blueprint
@@ -108,8 +144,160 @@ ihhashi/
 │   ├── PLAY_STORE_LISTING.md
 │   ├── TERMS_OF_SERVICE.md
 │   └── screenshots/
+├── legal/
+│   └── kimi-prompt-business-docs.md
+├── marketing/
+│   └── meta-ads/          # Automated Meta Ads management
+├── ihhashi-coin/            # Hashi Coin rewards system
+├── videos/                # Marketing videos
+├── swarm-reports/         # Swarm deployment reports
 └── docker-compose.yml     # Development compose
 ```
+
+## API Endpoints
+
+### Core Routes
+
+| Route | File | Description |
+|-------|------|-------------|
+| `/api/v1/auth/*` | `auth.py` | Authentication (phone OTP via Supabase) |
+| `/api/v1/users/*` | `users.py` | User management and profiles |
+| `/api/v1/addresses/*` | `addresses.py` | Address management |
+| `/api/v1/orders/*` | `orders.py` | Order creation and management |
+| `/api/v1/payments/*` | `payments.py` | Payment processing (Paystack, Yoco) |
+| `/api/v1/tracking/*` | `tracking.py` | Real-time delivery tracking |
+| `/api/v1/websocket/*` | `websocket.py` | WebSocket connections |
+
+### Marketplace Routes
+
+| Route | File | Description |
+|-------|------|-------------|
+| `/api/v1/merchants/*` | `merchants.py` | Vendor/merchant management |
+| `/api/v1/vendors/*` | `vendors.py` | Vendor-specific operations |
+| `/api/v1/products/*` | `products.py` | Product catalog |
+| `/api/v1/refunds/*` | `refunds.py` | Refund processing |
+
+### Delivery Routes
+
+| Route | File | Description |
+|-------|------|-------------|
+| `/api/v1/delivery-servicemen/*` | `delivery_servicemen.py` | Delivery partner management |
+| `/api/v1/riders/*` | `riders.py` | Rider operations |
+| `/api/v1/trips/*` | `trips.py` | Trip tracking |
+
+### Route Memory System (Phases 1-4)
+
+| Route | File | Description |
+|-------|------|-------------|
+| `/api/route-memory/*` | `route_memory.py` | Driver knowledge capture |
+| `/api/v1/pricing-intelligence/*` | `pricing_intelligence.py` | Pricing analytics and alerts |
+| `/api/v1/community/*` | `community.py` | Driver reputation and badges |
+| `/api/v1/nduna-intelligence/*` | `nduna_intelligence.py` | AI-powered ETA and routes |
+
+### Rewards & Referrals
+
+| Route | File | Description |
+|-------|------|-------------|
+| `/api/v1/referrals/*` | `referrals.py` | Referral code management |
+| `/api/v1/customer-rewards/*` | `customer_rewards.py` | iHhashi Coins, tiers, redemption |
+
+### AI Assistant
+
+| Route | File | Description |
+|-------|------|-------------|
+| `/api/v1/nduna/*` | `nduna.py` | Nduna chatbot endpoints |
+
+### Quantum Dispatch System (Phase 5)
+
+| Route | File | Description |
+|-------|------|-------------|
+| `/api/v1/quantum-dispatch/*` | `quantum_dispatch.py` | Quantum route optimization, A/B testing |
+| `/quantum/*` | `quantum_orchestrator.py` | Quantum routing orchestration for Nduna Bot |
+
+**Quantum Dispatch Endpoints:**
+- `GET /api/v1/quantum-dispatch/status` - System status
+- `POST /api/v1/quantum-dispatch/optimize` - Optimize single route
+- `POST /api/v1/quantum-dispatch/ab-test` - Run A/B test (quantum vs classical)
+- `GET /api/v1/quantum-dispatch/stats` - Performance statistics
+- `POST /api/v1/quantum-dispatch/batch-ab-test` - Batch A/B testing
+
+**Quantum Orchestrator Endpoints:**
+- `POST /quantum/optimize-routes` - Multi-driver route optimization
+- `POST /quantum/optimize-route-async` - Async route optimization
+- `POST /quantum/optimize-multi-stop` - Multi-stop route planning
+- `GET /quantum/status/{task_id}` - Check async task status
+- `GET /quantum/stats` - Optimization statistics
+- `GET /quantum/health` - Health check
+
+## Backend Services
+
+Business logic layer in `backend/app/services/`:
+
+| Service | File | Description |
+|---------|------|-------------|
+| **Auth** | `auth.py` | Authentication utilities, token validation |
+| **Delivery Fee** | `delivery_fee.py` | Dynamic delivery fee calculation based on distance, time, demand |
+| **File Upload** | `file_upload.py` | File handling for verification documents, product images |
+| **Matching** | `matching.py` | Order-driver matching algorithm, proximity-based dispatch |
+| **Payout Scheduler** | `payout_scheduler.py` | Sunday 11:11 AM SAST automatic payouts to delivery partners |
+| **Paystack** | `paystack.py` | Paystack payment integration for SA banks (FNB, Capitec, etc.) |
+| **Quantum Dispatch** | `quantum_dispatch.py` | Quantum route optimization service, A/B testing framework |
+| **Route Optimizer** | `route_optimizer.py` | Classical TSP solver, route planning algorithms |
+| **Telegram Bot** | `telegram_bot.py` | Nduna bot integration, customer support automation |
+
+## Route Memory System
+
+A driver knowledge capture system for improved ETAs and route suggestions.
+
+### Phase 1: Route Memory ✅
+- Submit actual delivery times
+- Driver insights (shortcuts, avoid areas)
+- Route feedback (smooth/ok/delayed)
+
+### Phase 2: Pricing Intelligence ✅
+- Pricing gap detection
+- Conversion by tier analysis
+- Churn tracking
+- Revenue vs forecast
+
+### Phase 3: Community ✅
+- Insight validation (upvotes, confirmations)
+- Driver reputation (Newcomer → Legend)
+- Local knowledge maps
+- Badge system
+
+### Phase 4: Nduna Integration ✅
+- ETA calculation with route memory
+- Best route suggestions
+- Driver alerts
+- Performance analytics
+
+## Customer Rewards
+
+### iHhashi Coins
+- Virtual currency earned through referrals and activity
+- 1 iHhashi Coin = R0.10
+- Referral: 50 coins per successful referral
+- Welcome bonus: 25 coins for new customers
+
+### Redemption Options
+- 100 coins = Free delivery
+- 150 coins = R15 discount
+- 300 coins = R30 discount
+
+### Customer Tiers
+| Tier | Referrals | Benefits |
+|------|-----------|----------|
+| 🥉 Bronze | 1-5 | 5% off, Standard support |
+| 🥈 Silver | 6-15 | 10% off, 1 free delivery/month |
+| 🥇 Gold | 16-50 | 15% off, 2 free deliveries/month |
+| 💎 Platinum | 51+ | 20% off, Unlimited free delivery |
+
+## Vendor Referral System
+
+- +2 FREE DAYS per successful vendor referral
+- Maximum 90 extra days (3 months)
+- Unique referral codes (IH-V-XXXXXX format)
 
 ## Deployment
 

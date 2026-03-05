@@ -62,7 +62,7 @@ async def get_referral_link(current_user = Depends(get_current_user)):
     return ReferralLinkResponse(
         referral_code=code,
         share_link=f"https://ihhashi.app/signup?ref={code}",
-        message="Share this link with friends! You BOTH get Hashi Coins when they sign up!",
+        message="Share this link with friends! You BOTH get iHhashi Coins when they sign up!",
         coins_for_referrer=CoinValues.REFERRAL_BONUS_REFERRER,
         coins_for_friend=CoinValues.REFERRAL_BONUS_REFEREE
     )
@@ -140,18 +140,18 @@ async def get_tier_info():
     return {
         "tiers": tiers,
         "how_to_level_up": "Refer friends to iHhashi! Each successful referral moves you closer to the next tier.",
-        "referral_reward": f"{CoinValues.REFERRAL_BONUS_REFERRER} Hashi Coins for you, {CoinValues.REFERRAL_BONUS_REFEREE} for your friend!"
+        "referral_reward": f"{CoinValues.REFERRAL_BONUS_REFERRER} iHhashi Coins for you, {CoinValues.REFERRAL_BONUS_REFEREE} for your friend!"
     }
 
 
 @router.post("/redeem/free-delivery", response_model=RedeemResponse)
 async def redeem_free_delivery(current_user = Depends(get_current_user)):
-    """Redeem Hashi Coins for a free delivery voucher"""
+    """Redeem iHhashi Coins for a free delivery voucher"""
     # TODO: Check balance and process redemption
     
     return RedeemResponse(
         success=False,
-        message=f"You need {CoinValues.FREE_DELIVERY_COST} Hashi Coins for free delivery",
+        message=f"You need {CoinValues.FREE_DELIVERY_COST} iHhashi Coins for free delivery",
         coins_spent=0,
         new_balance=0,
         reward_type="free_delivery",
@@ -165,7 +165,7 @@ async def redeem_discount(
     amount: int,  # 15 or 30
     current_user = Depends(get_current_user)
 ):
-    """Redeem Hashi Coins for a discount voucher (R15 or R30)"""
+    """Redeem iHhashi Coins for a discount voucher (R15 or R30)"""
     if amount not in [15, 30]:
         raise HTTPException(status_code=400, detail="Discount must be R15 or R30")
     
@@ -175,7 +175,7 @@ async def redeem_discount(
     
     return RedeemResponse(
         success=False,
-        message=f"You need {coins_required} Hashi Coins for R{amount} discount",
+        message=f"You need {coins_required} iHhashi Coins for R{amount} discount",
         coins_spent=0,
         new_balance=0,
         reward_type=f"discount_{amount}",
@@ -189,7 +189,7 @@ async def get_coin_history(
     limit: int = Query(20, le=100),
     current_user = Depends(get_current_user)
 ):
-    """Get your Hashi Coin transaction history"""
+    """Get your iHhashi Coin transaction history"""
     # TODO: Fetch from database
     
     return {
@@ -221,13 +221,13 @@ async def get_referral_history(
 
 @router.get("/promotions")
 async def get_active_promotions():
-    """Get active special promotions for Hashi Coins"""
+    """Get active special promotions for iHhashi Coins"""
     return {
         "promotions": [
             {
                 "id": "double-referral-weekend",
                 "title": "Double Referral Weekend!",
-                "description": "This weekend only: Get DOUBLE Hashi Coins for every referral!",
+                "description": "This weekend only: Get DOUBLE iHhashi Coins for every referral!",
                 "bonus_multiplier": 2,
                 "starts_at": "2026-03-01T00:00:00Z",
                 "ends_at": "2026-03-02T23:59:59Z",
@@ -236,7 +236,7 @@ async def get_active_promotions():
             {
                 "id": "first-order-bonus",
                 "title": "First Order Bonus",
-                "description": f"Get {CoinValues.FIRST_ORDER_BONUS} bonus Hashi Coins on your first order!",
+                "description": f"Get {CoinValues.FIRST_ORDER_BONUS} bonus iHhashi Coins on your first order!",
                 "bonus_coins": CoinValues.FIRST_ORDER_BONUS,
                 "is_active": True
             }
@@ -258,7 +258,7 @@ async def apply_referral_code(
     
     return {
         "success": True,
-        "message": f"Welcome to iHhashi! {CoinValues.REFERRAL_BONUS_REFEREE} Hashi Coins added to your account!",
+        "message": f"Welcome to iHhashi! {CoinValues.REFERRAL_BONUS_REFEREE} iHhashi Coins added to your account!",
         "coins_received": CoinValues.REFERRAL_BONUS_REFEREE,
         "referral_code": code
     }

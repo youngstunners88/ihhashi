@@ -1,7 +1,7 @@
 /**
- * Hashi Coin Trading with Referral Integration
+ * iHhashi Coin Trading with Referral Integration
  * 
- * Trade Hashi Coins with trade referral rewards.
+ * Trade iHhashi Coins with trade referral rewards.
  * Trade referrer earns 4% of the trade fee.
  * 
  * Usage:
@@ -28,7 +28,7 @@ import { base } from "viem/chains";
 // ============================================================================
 
 const CONFIG = {
-  // Hashi Coin address (set after deployment)
+  // iHhashi Coin address (set after deployment)
   hashiCoinAddress: (process.env.HASHI_COIN_ADDRESS || "0x0000000000000000000000000000000000000000") as Address,
   
   // Zora API key
@@ -52,7 +52,7 @@ interface TradeOptions {
 async function tradeHashiCoin(options: TradeOptions) {
   const { direction, amount, tradeReferrer, privateKey } = options;
   
-  console.log(`🔄 Trading Hashi Coin: ${direction.toUpperCase()}\n`);
+  console.log(`🔄 Trading iHhashi Coin: ${direction.toUpperCase()}\n`);
   
   // Set API key if available
   if (CONFIG.zoraApiKey) {
@@ -131,21 +131,21 @@ async function tradeHashiCoin(options: TradeOptions) {
 
 interface MintOptions {
   userId: string; // iHhashi user ID
-  amount: number; // Hashi Coins to mint on-chain
+  amount: number; // iHhashi Coins to mint on-chain
   walletAddress: Address;
 }
 
 /**
- * Convert Web2 Hashi Coins to on-chain
+ * Convert Web2 iHhashi Coins to on-chain
  * 
  * Flow:
- * 1. User has Web2 Hashi Coins in MongoDB
+ * 1. User has Web2 iHhashi Coins in MongoDB
  * 2. User requests to mint on-chain
  * 3. Platform burns Web2 coins, mints on-chain coins
- * 4. User receives tradeable Hashi Coins
+ * 4. User receives tradeable iHhashi Coins
  */
 async function mintOnChainHashiCoins(options: MintOptions) {
-  console.log(`🏭 Minting on-chain Hashi Coins for user ${options.userId}\n`);
+  console.log(`🏭 Minting on-chain iHhashi Coins for user ${options.userId}\n`);
   
   // In production, this would:
   // 1. Check user's Web2 balance via MongoDB
@@ -155,8 +155,8 @@ async function mintOnChainHashiCoins(options: MintOptions) {
   
   console.log(`📝 TODO: Implement bridge logic`);
   console.log(`   1. Check Web2 balance for user ${options.userId}`);
-  console.log(`   2. Burn ${options.amount} Web2 Hashi Coins`);
-  console.log(`   3. Mint ${options.amount} on-chain Hashi Coins to ${options.walletAddress}`);
+  console.log(`   2. Burn ${options.amount} Web2 iHhashi Coins`);
+  console.log(`   3. Mint ${options.amount} on-chain iHhashi Coins to ${options.walletAddress}`);
   
   return {
     status: "pending_implementation",
@@ -172,21 +172,21 @@ async function mintOnChainHashiCoins(options: MintOptions) {
 
 interface RedeemOptions {
   walletAddress: Address;
-  amount: number; // Hashi Coins to burn
+  amount: number; // iHhashi Coins to burn
   orderId: string; // iHhashi order to apply discount
 }
 
 /**
- * Burn on-chain Hashi Coins for order discount
+ * Burn on-chain iHhashi Coins for order discount
  * 
  * Flow:
- * 1. User has on-chain Hashi Coins
+ * 1. User has on-chain iHhashi Coins
  * 2. User requests discount on order
  * 3. Platform burns coins, applies discount
  * 4. Order gets reduced price
  */
 async function redeemHashiCoins(options: RedeemOptions) {
-  console.log(`🎁 Redeeming Hashi Coins for order ${options.orderId}\n`);
+  console.log(`🎁 Redeeming iHhashi Coins for order ${options.orderId}\n`);
   
   const REDEMPTION_RATES = {
     100: { type: "free_delivery", value: "Free Delivery" },
@@ -203,7 +203,7 @@ async function redeemHashiCoins(options: RedeemOptions) {
   }
   
   console.log(`✅ Redemption: ${redemption.value}`);
-  console.log(`🔥 Burning ${options.amount} Hashi Coins from ${options.walletAddress}`);
+  console.log(`🔥 Burning ${options.amount} iHhashi Coins from ${options.walletAddress}`);
   console.log(`📦 Applying to order: ${options.orderId}`);
   
   return {
@@ -223,14 +223,14 @@ async function main() {
   
   if (args.includes("--help") || args.includes("-h")) {
     console.log(`
-Hashi Coin Trading
+iHhashi Coin Trading
 
 USAGE:
   bun scripts/trade-hashi-coin.ts [COMMAND] [OPTIONS]
 
 COMMANDS:
-  buy                  Buy Hashi Coins
-  sell                 Sell Hashi Coins
+  buy                  Buy iHhashi Coins
+  sell                 Sell iHhashi Coins
   mint                 Convert Web2 coins to on-chain
   redeem               Burn coins for order discount
 
@@ -244,10 +244,10 @@ OPTIONS:
   --help, -h           Show this help message
 
 EXAMPLES:
-  # Buy 0.01 ETH worth of Hashi Coins with referral
+  # Buy 0.01 ETH worth of iHhashi Coins with referral
   bun scripts/trade-hashi-coin.ts buy --amount 10000000000000000 --referrer 0xReferrer --private-key 0x...
 
-  # Sell 100 Hashi Coins
+  # Sell 100 iHhashi Coins
   bun scripts/trade-hashi-coin.ts sell --amount 100 --private-key 0x...
 
 TRADE REFERRAL REWARDS:

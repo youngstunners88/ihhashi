@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 # Import test constants
-from conftest import TEST_PASSWORD
+from .conftest import TEST_PASSWORD
 
 from app.services.auth import (
     verify_password, get_password_hash, create_access_token,

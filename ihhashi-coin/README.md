@@ -1,14 +1,14 @@
-# Hashi Coin - Zora Coins Protocol Integration
+# iHhashi Coin - Zora Coins Protocol Integration
 
-On-chain Hashi Coins for iHhashi food delivery platform. Built on Zora's V4 Coins Protocol with built-in referral rewards.
+On-chain iHhashi Coins for iHhashi food delivery platform. Built on Zora's V4 Coins Protocol with built-in referral rewards.
 
 ## Overview
 
-Hashi Coin brings iHhashi's loyalty rewards on-chain, making them tradeable and giving them real market value. Every trade generates passive income for iHhashi through Zora's referral system.
+iHhashi Coin brings iHhashi's loyalty rewards on-chain, making them tradeable and giving them real market value. Every trade generates passive income for iHhashi through Zora's referral system.
 
 ## Referral Rewards (Zora V4)
 
-When Hashi Coin is created on Zora, the fee structure (1% total fee on all trades) is distributed as follows:
+When iHhashi Coin is created on Zora, the fee structure (1% total fee on all trades) is distributed as follows:
 
 | Recipient | % of Total Fees | Notes |
 |-----------|-----------------|-------|
@@ -22,9 +22,9 @@ When Hashi Coin is created on Zora, the fee structure (1% total fee on all trade
 ### Key Benefits
 
 1. **Passive Income Forever**: iHhashi earns 20% of ALL trading fees for the lifetime of the coin
-2. **Trade Referrals**: Users who refer others to buy Hashi Coin earn 4% of that trade
+2. **Trade Referrals**: Users who refer others to buy iHhashi Coin earn 4% of that trade
 3. **On-Chain Transparency**: All rewards distributed automatically on-chain
-4. **Tradeable Loyalty**: Customers can buy, sell, or hold their Hashi Coins
+4. **Tradeable Loyalty**: Customers can buy, sell, or hold their iHhashi Coins
 
 ## Integration with iHhashi Referral System
 
@@ -32,8 +32,8 @@ When Hashi Coin is created on Zora, the fee structure (1% total fee on all trade
 
 ```
 Customer Referrals:
-├── Referrer: 50 Hashi Coins
-├── New Customer: 25 Hashi Coins (welcome bonus)
+├── Referrer: 50 iHhashi Coins
+├── New Customer: 25 iHhashi Coins (welcome bonus)
 └── Tiers: Bronze → Silver → Gold → Platinum
 
 Vendor Referrals:
@@ -44,12 +44,12 @@ Vendor Referrals:
 ### New On-Chain Integration (v0.5.0)
 
 ```
-On-Chain Hashi Coins:
+On-Chain iHhashi Coins:
 ├── Platform Referrer (iHhashi): 20% of all trading fees
 ├── Trade Referrers: 4% per trade
 ├── Customers can:
-│   ├── Buy Hashi Coins on Zora
-│   ├── Sell Hashi Coins (real market value!)
+│   ├── Buy iHhashi Coins on Zora
+│   ├── Sell iHhashi Coins (real market value!)
 │   ├── Hold for potential appreciation
 │   └── Redeem for discounts (burn mechanism)
 └── Redemption:
@@ -78,7 +78,7 @@ IHHASHI_CREATOR=0xYourCreatorAddress
 BASE_RPC_URL=https://mainnet.base.org
 ```
 
-### 3. Deploy Hashi Coin
+### 3. Deploy iHhashi Coin
 
 ```bash
 cd /home/workspace/iHhashi/hashi-coin
@@ -87,7 +87,7 @@ bun scripts/create-hashi-coin.ts --private-key 0x...
 
 ## Usage
 
-### Create Hashi Coin
+### Create iHhashi Coin
 
 ```bash
 # Full creation (signs and submits transaction)
@@ -110,7 +110,7 @@ function CreateHashiCoinButton() {
   const handleCreate = async () => {
     const { calls, predictedCoinAddress } = await createCoinCall({
       creator: "0xUserAddress",
-      name: "Hashi Coin",
+      name: "iHhashi Coin",
       symbol: "HASHI",
       metadata: { type: "RAW_URI", uri: "ipfs://..." },
       currency: CreateConstants.ContentCoinCurrencies.ZORA,
@@ -126,7 +126,7 @@ function CreateHashiCoinButton() {
     });
   };
   
-  return <button onClick={handleCreate}>Create Hashi Coin</button>;
+  return <button onClick={handleCreate}>Create iHhashi Coin</button>;
 }
 ```
 
@@ -140,7 +140,7 @@ iHhashi Platform
 │   └── Referral
 │
 ├── Web3 Rewards (Zora)
-│   ├── Hashi Coin (ERC20)
+│   ├── iHhashi Coin (ERC20)
 │   ├── Platform Referrer: iHhashi Treasury
 │   └── Trade Referrers: Per-trade
 │
@@ -156,15 +156,15 @@ iHhashi Platform
 
 ```
 POST /api/v1/hashicoin/mint
-  - Convert Web2 Hashi Coins to on-chain
+  - Convert Web2 iHhashi Coins to on-chain
   - Body: { amount: number, wallet_address: string }
   
 POST /api/v1/hashicoin/redeem
-  - Burn on-chain Hashi Coins for discount
+  - Burn on-chain iHhashi Coins for discount
   - Body: { amount: number, order_id: string }
   
 GET /api/v1/hashicoin/balance/:wallet
-  - Get on-chain Hashi Coin balance
+  - Get on-chain iHhashi Coin balance
   - Returns: { balance: string, value_zar: number }
   
 GET /api/v1/hashicoin/rewards

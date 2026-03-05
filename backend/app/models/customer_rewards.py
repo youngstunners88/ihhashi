@@ -13,7 +13,7 @@ class CustomerTier(str, Enum):
 
 
 class CoinTransaction(BaseModel):
-    """A Hashi Coin transaction"""
+    """A iHhashi Coin transaction"""
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     customer_id: str
     amount: int  # Positive for earning, negative for spending
@@ -25,7 +25,7 @@ class CoinTransaction(BaseModel):
 
 
 class CustomerRewardAccount(BaseModel):
-    """Customer's reward account with Hashi Coins and tier status"""
+    """Customer's reward account with iHhashi Coins and tier status"""
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     customer_id: str
     referral_code: str  # Their unique referral code
@@ -33,7 +33,7 @@ class CustomerRewardAccount(BaseModel):
     # Tier system
     tier: CustomerTier = CustomerTier.BRONZE
     
-    # Hashi Coins (virtual currency)
+    # iHhashi Coins (virtual currency)
     hashi_coins_balance: int = 0
     total_coins_earned: int = 0
     total_coins_spent: int = 0
@@ -68,7 +68,7 @@ class CustomerRewardAccount(BaseModel):
         return self.tier != old_tier
     
     def add_coins(self, amount: int, description: str, transaction_type: str = "referral_reward") -> CoinTransaction:
-        """Add Hashi Coins to account"""
+        """Add iHhashi Coins to account"""
         self.hashi_coins_balance += amount
         self.total_coins_earned += amount
         self.updated_at = datetime.utcnow()
@@ -82,7 +82,7 @@ class CustomerRewardAccount(BaseModel):
         )
     
     def spend_coins(self, amount: int, description: str, transaction_type: str = "redemption") -> Optional[CoinTransaction]:
-        """Spend Hashi Coins. Returns None if insufficient balance."""
+        """Spend iHhashi Coins. Returns None if insufficient balance."""
         if self.hashi_coins_balance < amount:
             return None
         

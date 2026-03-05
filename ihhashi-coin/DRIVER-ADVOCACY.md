@@ -1,4 +1,4 @@
-# Hashi Coin: Delivery Serviceman Advocacy
+# iHhashi Coin: Delivery Serviceman Advocacy
 
 **Author:** Driver Advocate (Zo)  
 **Date:** 2026-03-02  
@@ -10,7 +10,7 @@
 
 Drivers are the **literal engine** of iHhashi. Without them, there's no delivery. Yet they face a brutal reality: daily cash needs, unpredictable income, no safety net, and constant vehicle expenses.
 
-**The Paradox**: We want drivers to HOLD Hashi Coins for long-term benefits, but drivers need LIQUIDITY for survival.
+**The Paradox**: We want drivers to HOLD iHhashi Coins for long-term benefits, but drivers need LIQUIDITY for survival.
 
 **The Solution**: A **dual-track system** — liquid rewards for daily survival + staked coins for long-term wealth building.
 
@@ -65,13 +65,13 @@ If family emergency Thursday? No money to help.
 
 | Reward Type | When Earned | Form | Access |
 |-------------|-------------|------|--------|
-| Delivery coins | Per delivery | Web2 Hashi Coins | Instant redeem for cash |
+| Delivery coins | Per delivery | Web2 iHhashi Coins | Instant redeem for cash |
 | Tips | Per delivery | Rand (R) | Instant in wallet |
-| Bonus coins | Peak hours/surge | Web2 Hashi Coins | Instant |
-| Quest rewards | Weekly challenges | Web2 Hashi Coins | 24-48 hours |
+| Bonus coins | Peak hours/surge | Web2 iHhashi Coins | Instant |
+| Quest rewards | Weekly challenges | Web2 iHhashi Coins | 24-48 hours |
 
-**Web2 Hashi Coins = Cash Equivalent**
-- 1 Hashi Coin = R0.10 (fixed)
+**Web2 iHhashi Coins = Cash Equivalent**
+- 1 iHhashi Coin = R0.10 (fixed)
 - Redeem instantly to Paystack wallet
 - No lock-up, no waiting
 - This is "gas money" — for survival
@@ -87,7 +87,7 @@ If family emergency Thursday? No money to help.
 | **Gold Vault** | 180 days | 1.5x | Gold Horse status, maintenance pool |
 | **Diamond Vault** | 365 days | 2.5x | Maximum rewards + governance |
 
-**Web3 Hashi Coins = Investment Asset**
+**Web3 iHhashi Coins = Investment Asset**
 - Tradeable on Zora
 - Price determined by market
 - Staking earns platform fee share
@@ -458,7 +458,7 @@ Minimum viable: 5% (still attractive)
 
 **Drivers are not costs to be minimised. They are partners to be empowered.**
 
-The Hashi Coin model for drivers succeeds when:
+The iHhashi Coin model for drivers succeeds when:
 
 1. **Survival needs are met** → Liquid rewards for daily expenses
 2. **Safety net exists** → Emergency fund + insurance pool

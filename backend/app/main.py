@@ -16,6 +16,7 @@ from app.routes.referrals import router as referrals_router
 from app.routes.customer_rewards import router as customer_rewards_router
 from app.routes.addresses import router as addresses_router
 from app.routes.products import router as products_router
+from app.routes.refunds import router as refunds_router
 from app.routes import trips, payments
 from app.routes.websocket import router as websocket_router
 from app.routes.nduna import router as nduna_router
@@ -23,6 +24,7 @@ from app.routes.route_memory import router as route_memory_router
 from app.routes.pricing_intelligence import router as pricing_intelligence_router
 from app.routes.community import router as community_router
 from app.routes.nduna_intelligence import router as nduna_intelligence_router
+from app.routes.quantum_orchestrator import router as quantum_router
 from app.config import settings
 from app.database import (
     connect_db, 
@@ -120,6 +122,7 @@ api_v1.include_router(vendors_router, prefix="/vendors", tags=["vendors"])
 api_v1.include_router(servicemen_router, prefix="/delivery-servicemen", tags=["delivery-servicemen"])
 api_v1.include_router(referrals_router, prefix="/referrals", tags=["referrals"])
 api_v1.include_router(customer_rewards_router, prefix="/customer-rewards", tags=["customer-rewards"])
+api_v1.include_router(refunds_router, prefix="/refunds", tags=["refunds"])
 api_v1.include_router(trips.router, prefix="/trips", tags=["trips"])
 api_v1.include_router(payments.router, prefix="/payments", tags=["payments"])
 api_v1.include_router(pricing_intelligence_router, prefix="/pricing-intelligence", tags=["pricing-intelligence"])
@@ -142,6 +145,9 @@ app.include_router(websocket_router, prefix="/ws", tags=["websocket"])
 app.include_router(nduna_router, prefix="/api/nduna", tags=["nduna-chatbot"])
 app.include_router(route_memory_router, prefix="/api/route-memory", tags=["route-memory"])
 
+# Quantum routing endpoints
+app.include_router(quantum_router, prefix="/api/v1", tags=["quantum-routing"])
+
 
 @app.get("/")
 async def root():
@@ -154,7 +160,7 @@ async def root():
             "Multi-modal delivery",
             "45-day free trial + referral bonuses",
             "0% tip fee",
-            "Hashi Coins rewards for customers",
+            "iHhashi Coins rewards for customers",
             "Tiered loyalty program"
         ],
         "timestamp": datetime.utcnow().isoformat()
