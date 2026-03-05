@@ -245,6 +245,32 @@ Business logic layer in `backend/app/services/`:
 | **Route Optimizer** | `route_optimizer.py` | Classical TSP solver, route planning algorithms |
 | **Telegram Bot** | `telegram_bot.py` | Nduna bot integration, customer support automation |
 
+## Frontend Hooks
+
+Custom React hooks in `frontend/src/hooks/`:
+
+| Hook | File | Description |
+|------|------|-------------|
+| **useCart** | `useCart.ts` | Shopping cart state management, add/remove items |
+| **useDataSaver** | `useDataSaver.ts` | Data saver mode detection for South African users |
+| **useLoadShedding** | `useLoadShedding.ts` | Load shedding status detection (Eskom integration) |
+| **usePostHog** | `usePostHog.ts` | Analytics tracking with PostHog |
+| **useSupabase** | `useSupabase.ts` | Authentication state with Supabase phone OTP |
+
+## Frontend Components
+
+Key components in `frontend/src/components/`:
+
+| Component | File | Description |
+|-----------|------|-------------|
+| **Header** | `Header.tsx` | App header with navigation, language toggle |
+| **CategoryBar** | `CategoryBar.tsx` | Food/grocery category navigation |
+| **MerchantCard** | `MerchantCard.tsx` | Restaurant/store card with ratings, delivery info |
+| **PaymentSelector** | `PaymentSelector.tsx` | Paystack/Yoco payment method selector |
+| **LanguageSelector** | `LanguageSelector.tsx` | SA language picker (Zulu, Sotho, Afrikaans, etc.) |
+| **LanguageToggle** | `LanguageToggle.tsx` | Compact language toggle button |
+| **SplashScreen** | `SplashScreen.tsx` | App loading screen with iHhashi logo |
+
 ## Route Memory System
 
 A driver knowledge capture system for improved ETAs and route suggestions.

@@ -375,40 +375,79 @@ See `docs/QUANTUM_DISPATCH_SETUP.md` for detailed instructions.
 
 ---
 
-## ✅ FEATURES IMPLEMENTED (v0.6.0)
+## 💰 REFUND & DISPUTE SYSTEM (v0.6.0)
 
-### Refund System - Frontend (v0.6.0)
-- **RefundRequestModal Component**: 2-step modal for requesting refunds
-  - Step 1: Select items to refund
-  - Step 2: Choose reason, add explanation, upload evidence
-  - Validates minimum 10 characters for explanation
-  - Shows refund total calculation
-- **RefundStatusCard Component**: Display refund status with:
-  - Color-coded status badges
-  - AI decision display with confidence score
-  - Resolution notes
-  - Days remaining until deadline (CPA compliance)
-  - Actions: Add Evidence, Open Dispute
-- **RefundsPage Component**: Dashboard for viewing all refunds
-  - Summary cards (Total, Pending, Approved, Rejected)
-  - Filter by status
-  - CPA rights notice
-- **Integration**: Orders.tsx updated with:
-  - "Request Refund" button for delivered orders
-  - RefundRequestModal integration
-  - API submission handler
+### Overview
+Comprehensive refund and dispute management compliant with South African Consumer Protection Act (CPA) 68 of 2008 and Electronic Communications and Transactions Act (ECTA) 25 of 2002.
 
-### Refund System - Backend (Already Complete)
-- Models: `refund.py` (CPA compliant)
-- API endpoints: `/api/v1/refunds/*`
-- AI moderation with fraud detection
-- Dispute escalation support
+### Features
+- **Customer Refunds**: Submit, track, and manage refund requests
+- **Merchant Portal**: Respond to refunds, view pending requests
+- **Dispute System**: Escalate rejected refunds to disputes
+- **AI Moderation**: Automated refund assessment with fraud detection
+- **Admin Dashboard**: Full oversight of all refunds and disputes
+- **CPA Compliance**: 10 business day resolution window, automatic deadline tracking
 
 ### Key Files
-- `frontend/src/components/order/RefundRequestModal.tsx`
-- `frontend/src/components/order/RefundStatusCard.tsx`
-- `frontend/src/pages/RefundsPage.tsx`
-- `frontend/src/pages/orders/Orders.tsx` (updated)
+- `backend/app/models/refund.py` - Refund, Dispute, and AI Moderation models
+- `backend/app/routes/refunds.py` - All refund and dispute API endpoints
+
+### API Endpoints
+
+#### Customer Endpoints
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/refunds/request` | Submit a refund request |
+| `GET /api/v1/refunds/my-requests` | Get customer's refund requests |
+| `GET /api/v1/refunds/{id}` | Get refund details |
+| `POST /api/v1/refunds/{id}/evidence` | Add evidence to refund |
+| `GET /api/v1/refunds/summary/customer` | Customer refund dashboard summary |
+
+#### Merchant Endpoints
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v1/refunds/merchant/pending` | Get pending refund requests |
+| `POST /api/v1/refunds/{id}/merchant-response` | Accept or dispute refund |
+| `GET /api/v1/refunds/summary/merchant` | Merchant refund summary |
+
+#### Dispute Endpoints
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/refunds/{id}/dispute` | Open a dispute |
+| `GET /api/v1/refunds/disputes/my` | Get user's disputes |
+| `POST /api/v1/refunds/disputes/{id}/message` | Add message to dispute |
+
+#### Admin/Moderator Endpoints
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v1/refunds/admin/refunds` | List all refunds |
+| `GET /api/v1/refunds/admin/disputes` | List all disputes |
+| `POST /api/v1/refunds/admin/disputes/{id}/resolve` | Resolve a dispute |
+| `POST /api/v1/refunds/{id}/ai-review` | Get AI moderation analysis |
+
+### Refund Reasons (CPA Compliant)
+- Defective goods (s56)
+- Not as described (s55)
+- Wrong item delivered
+- Missing items
+- Damaged in transit
+- Late delivery (s19)
+- Food safety concerns
+- Allergen issues
+- Counterfeit goods
+- Price errors
+
+### AI Moderation Factors
+- Customer refund history
+- Merchant reliability score
+- Evidence quality assessment
+- Fraud risk scoring
+- Similar case outcomes
+
+### Frontend Components
+- `RefundRequestModal.tsx` - Submit refund requests
+- `RefundStatusCard.tsx` - Display refund status
+- `RefundsPage.tsx` - Customer refund dashboard
 
 ---
 
