@@ -528,3 +528,56 @@ View issues: https://github.com/youngstunners88/ihhashi/issues?q=is:issue+is:ope
 - Budget shifts capped at 20%/day
 - All actions logged with timestamps
 - Telegram approval for major changes
+
+---
+
+## ⚡ QUANTUM MERCHANT ONBOARDING (v0.7.0)
+
+### Overview
+AI-powered instant merchant profile creation from business name, location, or website URL.
+
+### Capabilities
+- **URL Extraction**: Paste any website URL → complete merchant profile
+- **Business Name Extraction**: "Nando's Sandton City" → auto-populated profile
+- **Google Maps Extraction**: Maps link → full business data + hours
+- **Menu Intelligence**: Auto-extract menus from websites, PDFs, social media
+- **Social Enrichment**: Pull photos, hours, contact from social profiles
+
+### Extraction Sources
+| Source | Method | Accuracy |
+|--------|--------|----------|
+| Website | FireCrawl + LLM | 95%+ |
+| Google Maps | Apify scraper | 90%+ |
+| Business Name | Search + Scrape | 75%+ |
+| Social Media | API + Scraping | 85%+ |
+
+### Required Secrets (Zo Settings > Advanced)
+- `FIRECRAWL_API_KEY` - Get from https://firecrawl.dev
+- `APIFY_API_TOKEN` - Get from https://apify.com
+
+### API Endpoints
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/quantum-onboarding/start` | Start extraction job |
+| `GET /api/v1/quantum-onboarding/{job_id}/status` | Check status |
+| `GET /api/v1/quantum-onboarding/{job_id}/preview` | Preview extracted data |
+| `POST /api/v1/quantum-onboarding/{job_id}/confirm` | Confirm and create merchant |
+
+### Skill: quantum-extractor
+Zo has a built-in skill for quantum extraction:
+```bash
+# Extract from URL
+bun /home/workspace/Skills/quantum-extractor/scripts/extract.ts \
+  --url "https://restaurant.com" --type merchant
+
+# Extract from business name
+bun /home/workspace/Skills/quantum-extractor/scripts/extract.ts \
+  --name "Nando's" --location "Sandton"
+
+# Batch extraction
+bun /home/workspace/Skills/quantum-extractor/scripts/batch.ts \
+  --input businesses.csv --output results.json
+```
+
+### Documentation
+See `docs/QUANTUM_MERCHANT_ONBOARDING.md` for full implementation details.
