@@ -1,6 +1,7 @@
 """
-WebSocket routes for real-time order tracking with JWT authentication
-SECURITY: Authentication required for all endpoints, input validation
+WebSocket routes for real-time order tracking with JWT authentication and Redis Pub/Sub
+SECURITY: Authentication required for all endpoints, input validation, rate limiting
+SCALABILITY: Redis Pub/Sub for multi-instance support
 """
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
 from typing import Dict, List, Optional, Set
@@ -10,12 +11,14 @@ import json
 import asyncio
 import jwt
 import math
+import logging
 
 from app.database import get_collection
 from app.core.config import settings
+from app.core.redis_client import get_redis, redis_client
 
 router = APIRouter()
-
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # Constants for validation
@@ -28,6 +31,8 @@ MAX_SPEED = 200.0  # km/h - reasonable max for delivery vehicles
 HEARTBEAT_INTERVAL = 30.0  # seconds
 PONG_TIMEOUT = 10.0  # seconds to wait for pong response
 MAX_RECONNECT_ATTEMPTS = 3
+WS_RATE_LIMIT_MESSAGES = 100  # messages per minute
+WS_RATE_LIMIT_WINDOW = 60  # seconds
 
 
 # =============================================================================
@@ -127,12 +132,13 @@ def validate_location_data(location: dict) -> Optional[dict]:
 
 
 # =============================================================================
-# WebSocket Connection Manager with Room Support
+# Enhanced WebSocket Connection Manager with Redis Pub/Sub
 # =============================================================================
 class ConnectionManager:
     """
     Manages WebSocket connections with room-based messaging support.
     Supports multiple room types: orders, drivers, merchants, users
+    Includes Redis Pub/Sub for multi-instance support.
     """
     
     def __init__(self):
@@ -145,18 +151,127 @@ class ConnectionManager:
             RoomType.ADMIN: {},
         }
         
-        # Track all active connections with their metadata
+        # Track all active connections with metadata
         self.connections: Dict[WebSocket, dict] = {}
         
         # Quick lookups for specific connection types
         self.driver_connections: Dict[str, WebSocket] = {}
         self.user_connections: Dict[str, WebSocket] = {}
         self.merchant_connections: Dict[str, WebSocket] = {}
+        
+        # Rate limiting: websocket -> (message_count, window_start)
+        self.rate_limits: Dict[WebSocket, tuple] = {}
+        
+        # Instance ID for Redis messages
+        self._instance_id = f"ws_{id(self)}_{datetime.utcnow().timestamp()}"
+        self._redis_subscriber_task: Optional[asyncio.Task] = None
+        
+        # Metrics
+        self.connection_count_total = 0
+        self.messages_sent = 0
+        
+    async def start(self):
+        """Start Redis subscriber for cross-instance messaging"""
+        if get_redis():
+            self._redis_subscriber_task = asyncio.create_task(self._redis_subscriber())
+            logger.info("WebSocket manager Redis subscriber started")
+    
+    async def stop(self):
+        """Stop Redis subscriber and close connections"""
+        if self._redis_subscriber_task:
+            self._redis_subscriber_task.cancel()
+        
+        # Close all connections
+        for websocket in list(self.connections.keys()):
+            await self.disconnect(websocket)
+    
+    async def _redis_subscriber(self):
+        """Subscribe to Redis Pub/Sub for cross-instance messaging"""
+        try:
+            redis = get_redis()
+            if not redis:
+                return
+            
+            pubsub = redis.pubsub()
+            await pubsub.subscribe("ihhashi:websocket:broadcast")
+            logger.info("Subscribed to Redis WebSocket channel")
+            
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    try:
+                        data = json.loads(message["data"])
+                        # Skip messages from this instance
+                        if data.get("instance_id") == self._instance_id:
+                            continue
+                        
+                        # Broadcast to local connections
+                        await self._broadcast_to_local_room(
+                            RoomType(data["room_type"]),
+                            data["room_id"],
+                            data["message"]
+                        )
+                    except Exception as e:
+                        logger.error(f"Error handling Redis message: {e}")
+        
+        except asyncio.CancelledError:
+            logger.info("Redis subscriber cancelled")
+        except Exception as e:
+            logger.error(f"Redis subscriber error: {e}")
+    
+    async def _broadcast_to_local_room(
+        self,
+        room_type: RoomType,
+        room_id: str,
+        message: dict,
+        exclude: Optional[WebSocket] = None
+    ):
+        """Broadcast only to local connections"""
+        if room_id not in self.rooms.get(room_type, {}):
+            return
+        
+        dead_connections = []
+        
+        for websocket, metadata in list(self.rooms[room_type][room_id]):
+            if websocket == exclude:
+                continue
+            
+            try:
+                safe_message = self._filter_message(message, metadata)
+                await websocket.send_json(safe_message)
+                self.messages_sent += 1
+            except Exception:
+                dead_connections.append(websocket)
+        
+        # Clean up dead connections
+        for ws in dead_connections:
+            await self.disconnect(ws)
+    
+    def _check_rate_limit(self, websocket: WebSocket) -> bool:
+        """Check if connection is within rate limit"""
+        now = datetime.utcnow()
+        
+        if websocket in self.rate_limits:
+            count, window_start = self.rate_limits[websocket]
+            
+            # Reset window if expired
+            if (now - window_start).total_seconds() > WS_RATE_LIMIT_WINDOW:
+                self.rate_limits[websocket] = (1, now)
+                return True
+            
+            # Check limit
+            if count >= WS_RATE_LIMIT_MESSAGES:
+                return False
+            
+            self.rate_limits[websocket] = (count + 1, window_start)
+            return True
+        else:
+            self.rate_limits[websocket] = (1, now)
+            return True
     
     async def connect(
-        self, 
-        websocket: WebSocket, 
-        room_type: RoomType, 
+        self,
+        websocket: WebSocket,
+        room_type: RoomType,
         room_id: str,
         user_id: str,
         metadata: Optional[dict] = None
@@ -173,7 +288,7 @@ class ConnectionManager:
             "user_id": user_id,
             "room_type": room_type,
             "room_id": room_id,
-            "connected_at": datetime.utcnow().isoformat(),
+            "connected_at": datetime.utcnow(),
             "last_ping": datetime.utcnow(),
             **(metadata or {})
         }
@@ -189,6 +304,8 @@ class ConnectionManager:
         elif room_type == RoomType.MERCHANT:
             self.merchant_connections[room_id] = websocket
         
+        self.connection_count_total += 1
+        
         # Send connection confirmation
         try:
             await websocket.send_json({
@@ -197,10 +314,10 @@ class ConnectionManager:
                 "room_id": room_id,
                 "timestamp": datetime.utcnow().isoformat()
             })
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to send connection confirmation: {e}")
     
-    def disconnect(self, websocket: WebSocket):
+    async def disconnect(self, websocket: WebSocket):
         """Remove a connection from all rooms"""
         if websocket not in self.connections:
             return
@@ -213,7 +330,7 @@ class ConnectionManager:
         # Remove from room
         if room_type and room_id and room_id in self.rooms.get(room_type, {}):
             self.rooms[room_type][room_id] = {
-                (ws, meta) for ws, meta in self.rooms[room_type][room_id] 
+                (ws, meta) for ws, meta in self.rooms[room_type][room_id]
                 if ws != websocket
             }
             
@@ -229,60 +346,73 @@ class ConnectionManager:
         elif room_type == RoomType.MERCHANT and room_id in self.merchant_connections:
             del self.merchant_connections[room_id]
         
-        # Remove from connections
+        # Remove from connections and rate limits
         del self.connections[websocket]
+        if websocket in self.rate_limits:
+            del self.rate_limits[websocket]
+        
+        # Try to close websocket gracefully
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+        
+        # Update offline status
+        await update_offline_status(user_id)
     
     async def broadcast_to_room(
-        self, 
-        room_type: RoomType, 
-        room_id: str, 
+        self,
+        room_type: RoomType,
+        room_id: str,
         message: dict,
         exclude: Optional[WebSocket] = None
     ):
-        """Broadcast message to all connections in a room"""
-        if room_id not in self.rooms.get(room_type, {}):
-            return
+        """Broadcast message to all connections in a room (local + remote via Redis)"""
+        # Broadcast to local connections
+        await self._broadcast_to_local_room(room_type, room_id, message, exclude)
         
-        dead_connections = []
-        
-        for websocket, metadata in self.rooms[room_type][room_id]:
-            if websocket == exclude:
-                continue
-            
+        # Publish to Redis for other instances
+        redis = get_redis()
+        if redis:
             try:
-                # Filter sensitive data based on connection type
-                safe_message = self._filter_message(message, metadata)
-                await websocket.send_json(safe_message)
-            except Exception:
-                dead_connections.append(websocket)
-        
-        # Clean up dead connections
-        for ws in dead_connections:
-            self.disconnect(ws)
+                await redis.publish("ihhashi:websocket:broadcast", json.dumps({
+                    "instance_id": self._instance_id,
+                    "room_type": room_type,
+                    "room_id": room_id,
+                    "message": message
+                }))
+            except Exception as e:
+                logger.error(f"Failed to publish to Redis: {e}")
     
     async def send_to_user(self, user_id: str, message: dict):
         """Send message to a specific user"""
         if user_id in self.user_connections:
             try:
                 await self.user_connections[user_id].send_json(message)
-            except:
-                self.disconnect(self.user_connections[user_id])
+                self.messages_sent += 1
+            except Exception as e:
+                logger.error(f"Failed to send to user {user_id}: {e}")
+                await self.disconnect(self.user_connections[user_id])
     
     async def send_to_driver(self, driver_id: str, message: dict):
         """Send message to a specific driver"""
         if driver_id in self.driver_connections:
             try:
                 await self.driver_connections[driver_id].send_json(message)
-            except:
-                self.disconnect(self.driver_connections[driver_id])
+                self.messages_sent += 1
+            except Exception as e:
+                logger.error(f"Failed to send to driver {driver_id}: {e}")
+                await self.disconnect(self.driver_connections[driver_id])
     
     async def send_to_merchant(self, merchant_id: str, message: dict):
         """Send message to a specific merchant"""
         if merchant_id in self.merchant_connections:
             try:
                 await self.merchant_connections[merchant_id].send_json(message)
-            except:
-                self.disconnect(self.merchant_connections[merchant_id])
+                self.messages_sent += 1
+            except Exception as e:
+                logger.error(f"Failed to send to merchant {merchant_id}: {e}")
+                await self.disconnect(self.merchant_connections[merchant_id])
     
     def _filter_message(self, message: dict, metadata: dict) -> dict:
         """Filter sensitive data from message based on connection metadata"""
@@ -323,16 +453,28 @@ async def verify_websocket_token(token: str) -> Optional[dict]:
     Verify JWT token for WebSocket authentication.
     Returns user payload if valid, None otherwise.
     """
+    if not token:
+        return None
+    
     try:
         payload = jwt.decode(
             token,
             settings.secret_key,
             algorithms=[settings.algorithm]
         )
+        
+        # Explicit expiration check
+        exp = payload.get("exp")
+        if exp and datetime.utcnow().timestamp() > exp:
+            logger.warning("WebSocket token expired")
+            return None
+        
         return payload
     except jwt.ExpiredSignatureError:
+        logger.warning("WebSocket token expired")
         return None
     except jwt.InvalidTokenError:
+        logger.warning("Invalid WebSocket token")
         return None
 
 
@@ -379,7 +521,7 @@ class HeartbeatManager:
                 return data.get("type") == WebSocketEventType.PONG
             except asyncio.TimeoutError:
                 return False
-        except:
+        except Exception:
             return False
     
     def cancel_pending(self, websocket: WebSocket):
@@ -434,6 +576,14 @@ async def general_websocket(
                     timeout=HEARTBEAT_INTERVAL
                 )
                 
+                # Check rate limit
+                if not manager._check_rate_limit(websocket):
+                    await websocket.send_json({
+                        "type": WebSocketEventType.ERROR,
+                        "message": "Rate limit exceeded"
+                    })
+                    continue
+                
                 event_type = data.get("type")
                 
                 # Handle ping
@@ -457,9 +607,9 @@ async def general_websocket(
                         if has_access:
                             metadata = {"is_owner": data.get("is_owner", False)}
                             await manager.connect(
-                                websocket, 
-                                RoomType(room_type), 
-                                room_id, 
+                                websocket,
+                                RoomType(room_type),
+                                room_id,
                                 user_id,
                                 metadata
                             )
@@ -482,7 +632,7 @@ async def general_websocket(
                     room_id = data.get("room_id")
                     
                     if (room_type, room_id) in subscribed_rooms:
-                        manager.disconnect(websocket)
+                        await manager.disconnect(websocket)
                         subscribed_rooms.remove((room_type, room_id))
                         
                         await websocket.send_json({
@@ -494,7 +644,7 @@ async def general_websocket(
                 # Handle message
                 elif event_type == WebSocketEventType.NEW_MESSAGE:
                     await handle_chat_message(user_id, data)
-                
+            
             except asyncio.TimeoutError:
                 # Send heartbeat
                 pong_received = await heartbeat_manager.send_heartbeat(websocket)
@@ -504,19 +654,16 @@ async def general_websocket(
     except WebSocketDisconnect:
         pass
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}")
     finally:
         # Cleanup
         heartbeat_manager.cancel_pending(websocket)
-        manager.disconnect(websocket)
-        
-        # Update user/driver status if needed
-        await update_offline_status(user_id)
+        await manager.disconnect(websocket)
 
 
 @router.websocket("/track/{order_id}")
 async def track_order_websocket(
-    websocket: WebSocket, 
+    websocket: WebSocket,
     order_id: str,
     token: Optional[str] = Query(None)
 ):
@@ -544,8 +691,8 @@ async def track_order_websocket(
     
     try:
         order = await orders_col.find_one({"id": order_id})
-    except:
-        pass
+    except Exception as e:
+        logger.error(f"Error fetching order: {e}")
     
     if not order:
         await websocket.close(code=4004, reason="Order not found")
@@ -566,9 +713,9 @@ async def track_order_websocket(
     
     # Connect to order room
     await manager.connect(
-        websocket, 
-        RoomType.ORDER, 
-        order_id, 
+        websocket,
+        RoomType.ORDER,
+        order_id,
         user_id,
         {"is_owner": is_owner, "order_status": order.get("status")}
     )
@@ -592,7 +739,9 @@ async def track_order_websocket(
             if rider and rider.get("current_location"):
                 initial_message["rider_location"] = rider["current_location"]
                 initial_message["rider_name"] = rider.get("full_name")
-                initial_message["rider_phone"] = rider.get("phone") if is_owner else None
+                # Don't expose phone number to non-owners
+                if is_owner:
+                    initial_message["rider_phone"] = rider.get("phone")
         
         await websocket.send_json(initial_message)
         
@@ -603,6 +752,14 @@ async def track_order_websocket(
                     websocket.receive_json(),
                     timeout=HEARTBEAT_INTERVAL
                 )
+                
+                # Check rate limit
+                if not manager._check_rate_limit(websocket):
+                    await websocket.send_json({
+                        "type": WebSocketEventType.ERROR,
+                        "message": "Rate limit exceeded"
+                    })
+                    continue
                 
                 event_type = data.get("type")
                 
@@ -619,9 +776,14 @@ async def track_order_websocket(
                     if order.get("rider_id"):
                         rider = await riders_col.find_one({"id": order["rider_id"]})
                         if rider and rider.get("current_location"):
+                            loc = rider["current_location"]
                             await websocket.send_json({
                                 "type": WebSocketEventType.DRIVER_LOCATION_UPDATE,
-                                "rider_location": rider["current_location"],
+                                "rider_location": {
+                                    "latitude": loc.get("latitude"),
+                                    "longitude": loc.get("longitude"),
+                                    "last_updated": loc.get("last_updated")
+                                },
                                 "timestamp": datetime.utcnow().isoformat()
                             })
                 
@@ -646,12 +808,12 @@ async def track_order_websocket(
     except WebSocketDisconnect:
         pass
     finally:
-        manager.disconnect(websocket)
+        await manager.disconnect(websocket)
 
 
 @router.websocket("/rider/{rider_id}")
 async def rider_websocket(
-    websocket: WebSocket, 
+    websocket: WebSocket,
     rider_id: str,
     token: Optional[str] = Query(None)
 ):
@@ -678,9 +840,9 @@ async def rider_websocket(
     
     # Connect to driver room
     await manager.connect(
-        websocket, 
-        RoomType.DRIVER, 
-        rider_id, 
+        websocket,
+        RoomType.DRIVER,
+        rider_id,
         rider_id,
         {"status": "available"}
     )
@@ -708,6 +870,14 @@ async def rider_websocket(
                     websocket.receive_json(),
                     timeout=HEARTBEAT_INTERVAL
                 )
+                
+                # Check rate limit
+                if not manager._check_rate_limit(websocket):
+                    await websocket.send_json({
+                        "type": WebSocketEventType.ERROR,
+                        "message": "Rate limit exceeded"
+                    })
+                    continue
                 
                 event_type = data.get("type")
                 
@@ -814,163 +984,7 @@ async def rider_websocket(
             {"id": rider_id},
             {"$set": {"status": "offline"}}
         )
-        manager.disconnect(websocket)
-
-
-@router.websocket("/merchant/{merchant_id}")
-async def merchant_websocket(
-    websocket: WebSocket,
-    merchant_id: str,
-    token: Optional[str] = Query(None)
-):
-    """
-    WebSocket endpoint for merchants to receive order notifications
-    
-    Merchants connect to receive:
-    - New order notifications
-    - Order status updates
-    - Customer messages
-    """
-    # Authenticate
-    payload = await authenticate_websocket(websocket, token)
-    if not payload:
-        return
-    
-    user_id = payload.get("sub")
-    user_role = payload.get("role")
-    
-    # Verify access
-    if user_id != merchant_id and user_role != "admin":
-        await websocket.close(code=4003, reason="Unauthorized for this merchant")
-        return
-    
-    # Connect to merchant room
-    await manager.connect(
-        websocket,
-        RoomType.MERCHANT,
-        merchant_id,
-        user_id,
-        {"is_owner": True}
-    )
-    
-    try:
-        await websocket.send_json({
-            "type": WebSocketEventType.CONNECTED,
-            "message": "Connected as merchant",
-            "merchant_id": merchant_id,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-        
-        while True:
-            try:
-                data = await asyncio.wait_for(
-                    websocket.receive_json(),
-                    timeout=HEARTBEAT_INTERVAL
-                )
-                
-                event_type = data.get("type")
-                
-                if event_type == WebSocketEventType.PING:
-                    manager.update_ping(websocket)
-                    await websocket.send_json({
-                        "type": WebSocketEventType.PONG,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                
-                elif event_type == WebSocketEventType.ORDER_STATUS_UPDATED:
-                    # Merchant updates order status
-                    order_id = data.get("order_id")
-                    new_status = data.get("status")
-                    if order_id and new_status:
-                        await handle_order_status_update(merchant_id, order_id, new_status)
-                
-                elif event_type == WebSocketEventType.NEW_MESSAGE:
-                    # Merchant sends message to customer
-                    await handle_chat_message(user_id, data)
-            
-            except asyncio.TimeoutError:
-                pong_received = await heartbeat_manager.send_heartbeat(websocket)
-                if not pong_received:
-                    break
-    
-    except WebSocketDisconnect:
-        pass
-    finally:
-        manager.disconnect(websocket)
-
-
-@router.websocket("/user/{user_id}")
-async def user_websocket(
-    websocket: WebSocket, 
-    user_id: str,
-    token: Optional[str] = Query(None)
-):
-    """
-    WebSocket endpoint for user notifications with JWT auth
-    
-    Users connect to receive:
-    - Order status updates
-    - Delivery notifications
-    - Chat messages from rider/merchant
-    
-    Authentication: Pass JWT token as query parameter ?token=xxx
-    """
-    # Authenticate
-    payload = await authenticate_websocket(websocket, token)
-    if not payload:
-        return
-    
-    # Verify the token belongs to this user
-    token_user_id = payload.get("sub")
-    if token_user_id != user_id:
-        await websocket.close(code=4003, reason="Unauthorized for this user")
-        return
-    
-    # Connect to user room
-    await manager.connect(
-        websocket,
-        RoomType.USER,
-        user_id,
-        user_id
-    )
-    
-    try:
-        await websocket.send_json({
-            "type": WebSocketEventType.CONNECTED,
-            "message": "Connected for notifications",
-            "user_id": user_id,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-        
-        while True:
-            try:
-                data = await asyncio.wait_for(
-                    websocket.receive_json(),
-                    timeout=HEARTBEAT_INTERVAL
-                )
-                
-                event_type = data.get("type")
-                
-                if event_type == WebSocketEventType.PING:
-                    manager.update_ping(websocket)
-                    await websocket.send_json({
-                        "type": WebSocketEventType.PONG,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                
-                elif event_type == WebSocketEventType.NEW_MESSAGE:
-                    # User sends message
-                    await handle_chat_message(user_id, data)
-            
-            except asyncio.TimeoutError:
-                pong_received = await heartbeat_manager.send_heartbeat(websocket)
-                if not pong_received:
-                    break
-    
-    except WebSocketDisconnect:
-        pass
-    finally:
-        manager.disconnect(websocket)
+        await manager.disconnect(websocket)
 
 
 # =============================================================================
@@ -978,9 +992,9 @@ async def user_websocket(
 # =============================================================================
 
 async def validate_room_access(
-    user_id: str, 
-    user_role: str, 
-    room_type: str, 
+    user_id: str,
+    user_role: str,
+    room_type: str,
     room_id: str
 ) -> bool:
     """Validate if user has access to a specific room"""
@@ -998,244 +1012,36 @@ async def validate_room_access(
             )
     
     elif room_type == RoomType.DRIVER:
-        return room_id == user_id
+        return user_id == room_id
     
     elif room_type == RoomType.MERCHANT:
-        return room_id == user_id
+        return user_id == room_id
     
     elif room_type == RoomType.USER:
-        return room_id == user_id
+        return user_id == room_id
     
     return False
 
 
-async def update_offline_status(user_id: str):
-    """Update user/driver status when they disconnect"""
-    # Update rider status if applicable
-    riders_col = get_collection("riders")
-    await riders_col.update_one(
-        {"id": user_id},
-        {"$set": {"status": "offline", "last_offline": datetime.utcnow()}}
-    )
+async def handle_chat_message(user_id: str, data: dict):
+    """Handle chat messages between users"""
+    # TODO: Implement chat message handling
+    pass
 
 
 async def handle_order_accepted(rider_id: str, order_id: str):
-    """Handle when a rider accepts an order"""
-    orders_col = get_collection("orders")
-    
-    # Update order
-    await orders_col.update_one(
-        {"id": order_id},
-        {
-            "$set": {
-                "rider_id": rider_id,
-                "status": "confirmed",
-                "confirmed_at": datetime.utcnow()
-            },
-            "$push": {
-                "status_history": {
-                    "status": "confirmed",
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "actor": rider_id
-                }
-            }
-        }
-    )
-    
-    # Notify order room
-    await manager.broadcast_to_room(
-        RoomType.ORDER,
-        order_id,
-        {
-            "type": WebSocketEventType.DRIVER_ASSIGNED,
-            "order_id": order_id,
-            "rider_id": rider_id,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
+    """Handle rider accepting an order"""
+    # TODO: Implement order acceptance logic
+    pass
 
 
 async def handle_delivery_completed(rider_id: str, order_id: str):
-    """Handle when a rider completes a delivery"""
-    orders_col = get_collection("orders")
-    
-    # Update order
-    await orders_col.update_one(
-        {"id": order_id},
-        {
-            "$set": {
-                "status": "delivered",
-                "delivered_at": datetime.utcnow()
-            },
-            "$push": {
-                "status_history": {
-                    "status": "delivered",
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "actor": rider_id
-                }
-            }
-        }
-    )
-    
-    # Notify order room
-    await manager.broadcast_to_room(
-        RoomType.ORDER,
-        order_id,
-        {
-            "type": WebSocketEventType.DELIVERY_COMPLETED,
-            "order_id": order_id,
-            "rider_id": rider_id,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    
-    # Get order details to notify user
-    order = await orders_col.find_one({"id": order_id})
-    if order:
-        await manager.send_to_user(
-            order.get("buyer_id"),
-            {
-                "type": WebSocketEventType.DELIVERY_COMPLETED,
-                "order_id": order_id,
-                "message": "Your order has been delivered!",
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        )
+    """Handle rider completing a delivery"""
+    # TODO: Implement delivery completion logic
+    pass
 
 
-async def handle_order_status_update(merchant_id: str, order_id: str, new_status: str):
-    """Handle merchant updating order status"""
-    orders_col = get_collection("orders")
-    
-    # Update order
-    await orders_col.update_one(
-        {"id": order_id},
-        {
-            "$set": {"status": new_status},
-            "$push": {
-                "status_history": {
-                    "status": new_status,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "actor": merchant_id
-                }
-            }
-        }
-    )
-    
-    # Notify order room
-    await manager.broadcast_to_room(
-        RoomType.ORDER,
-        order_id,
-        {
-            "type": WebSocketEventType.ORDER_STATUS_UPDATED,
-            "order_id": order_id,
-            "status": new_status,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-    
-    # Notify user
-    order = await orders_col.find_one({"id": order_id})
-    if order:
-        await manager.send_to_user(
-            order.get("buyer_id"),
-            {
-                "type": WebSocketEventType.ORDER_STATUS_UPDATED,
-                "order_id": order_id,
-                "status": new_status,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        )
-
-
-async def handle_chat_message(sender_id: str, data: dict):
-    """Handle chat messages between users"""
-    message_data = {
-        "type": WebSocketEventType.NEW_MESSAGE,
-        "sender_id": sender_id,
-        "order_id": data.get("order_id"),
-        "message": data.get("message"),
-        "timestamp": datetime.utcnow().isoformat()
-    }
-    
-    # Send to order room
-    order_id = data.get("order_id")
-    if order_id:
-        await manager.broadcast_to_room(
-            RoomType.ORDER,
-            order_id,
-            message_data
-        )
-
-
-# =============================================================================
-# Public API for other routes to send WebSocket messages
-# =============================================================================
-
-async def notify_order_update(order_id: str, update_type: str, data: dict):
-    """
-    Call this from other routes to notify connected clients of order updates
-    """
-    message = {
-        "type": update_type,
-        "order_id": order_id,
-        "timestamp": datetime.utcnow().isoformat(),
-        **data
-    }
-    await manager.broadcast_to_room(RoomType.ORDER, order_id, message)
-
-
-async def notify_order_created(order_id: str, order_data: dict):
-    """Notify when a new order is created"""
-    await manager.broadcast_to_room(
-        RoomType.MERCHANT,
-        order_data.get("store_id"),
-        {
-            "type": WebSocketEventType.ORDER_CREATED,
-            "order_id": order_id,
-            "order": order_data,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-
-
-async def notify_rider(rider_id: str, notification_type: str, data: dict):
-    """Send notification to a rider"""
-    await manager.send_to_driver(rider_id, {
-        "type": notification_type,
-        "timestamp": datetime.utcnow().isoformat(),
-        **data
-    })
-
-
-async def notify_user(user_id: str, notification_type: str, data: dict):
-    """Send notification to a user"""
-    await manager.send_to_user(user_id, {
-        "type": notification_type,
-        "timestamp": datetime.utcnow().isoformat(),
-        **data
-    })
-
-
-async def notify_merchant(merchant_id: str, notification_type: str, data: dict):
-    """Send notification to a merchant"""
-    await manager.send_to_merchant(merchant_id, {
-        "type": notification_type,
-        "timestamp": datetime.utcnow().isoformat(),
-        **data
-    })
-
-
-async def broadcast_driver_location(order_id: str, location: dict, rider_id: str):
-    """Broadcast driver location update to order room"""
-    await manager.broadcast_to_room(
-        RoomType.ORDER,
-        order_id,
-        {
-            "type": WebSocketEventType.DRIVER_LOCATION_UPDATE,
-            "order_id": order_id,
-            "rider_id": rider_id,
-            "rider_location": location,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
+async def update_offline_status(user_id: str):
+    """Update user offline status"""
+    # TODO: Update user status in database
+    pass

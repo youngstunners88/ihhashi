@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from datetime import datetime
 from contextlib import asynccontextmanager
 import sentry_sdk
@@ -18,7 +19,7 @@ from app.routes.addresses import router as addresses_router
 from app.routes.products import router as products_router
 from app.routes.refunds import router as refunds_router
 from app.routes import trips, payments
-from app.routes.websocket import router as websocket_router
+from app.routes.websocket import router as websocket_router, manager as ws_manager
 from app.routes.nduna import router as nduna_router
 from app.routes.route_memory import router as route_memory_router
 from app.routes.pricing_intelligence import router as pricing_intelligence_router
@@ -35,6 +36,13 @@ from app.database import (
 from app.database import database
 from app.core.redis_client import init_redis, close_redis
 from app.middleware.rate_limit import setup_rate_limiting
+from app.middleware.security_enhanced import (
+    SecurityHeadersMiddleware,
+    RequestValidationMiddleware,
+    RequestIDMiddleware,
+    LoggingMiddleware
+)
+from app.monitoring.metrics import init_app_info, get_metrics, update_websocket_connections
 
 logger = logging.getLogger(__name__)
 
@@ -72,12 +80,30 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Redis connection failed (caching disabled): {e}")
     
+    # Initialize WebSocket manager with Redis
+    try:
+        await ws_manager.start()
+        logger.info("WebSocket manager started")
+    except Exception as e:
+        logger.warning(f"WebSocket manager startup warning: {e}")
+    
+    # Initialize monitoring
+    init_app_info(version="1.0.0", environment=settings.environment)
+    logger.info(f"Monitoring initialized for {settings.environment}")
+    
     logger.info("iHhashi API startup complete")
     
     yield
     
     # Shutdown
     logger.info("Shutting down iHhashi API...")
+    
+    # Stop WebSocket manager
+    try:
+        await ws_manager.stop()
+        logger.info("WebSocket manager stopped")
+    except Exception as e:
+        logger.warning(f"Error stopping WebSocket manager: {e}")
     
     # Close Redis connection
     try:
@@ -100,6 +126,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Enhanced security middleware
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestValidationMiddleware)
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(LoggingMiddleware)
+
 # Parse CORS origins from environment
 cors_origins = [origin.strip() for origin in settings.cors_origins.split(",")]
 
@@ -107,8 +139,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Request-ID"],
+    max_age=600,
 )
 
 # Setup Redis-backed rate limiting
@@ -159,7 +192,7 @@ app.include_router(quantum_router, prefix="/api/v1", tags=["quantum-routing"])
 async def root():
     return {
         "name": "iHhashi API",
-        "version": "0.4.2",
+        "version": "1.0.0",
         "status": "operational",
         "features": [
             "Blue Horse verification",
@@ -193,6 +226,10 @@ async def health():
     except Exception:
         redis_status = "unavailable"
     
+    # Check WebSocket manager
+    ws_status = "active" if ws_manager.get_connection_count() >= 0 else "inactive"
+    update_websocket_connections("total", ws_manager.get_connection_count())
+    
     # Determine overall status
     overall_status = "healthy"
     if db_status.get("status") != "healthy":
@@ -202,6 +239,34 @@ async def health():
         "status": overall_status,
         "database": db_status,
         "redis": redis_status,
+        "websocket": ws_status,
         "environment": settings.environment,
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return get_metrics()
+
+
+@app.get("/ready")
+async def ready():
+    """Readiness probe for Kubernetes"""
+    try:
+        # Check critical dependencies
+        db_ok = (await db_health_check()).get("status") == "healthy"
+        
+        if db_ok:
+            return {"status": "ready"}
+        else:
+            return {"status": "not ready", "reason": "database unhealthy"}
+    except Exception as e:
+        return {"status": "not ready", "reason": str(e)}
+
+
+@app.get("/live")
+async def live():
+    """Liveness probe for Kubernetes"""
+    return {"status": "alive"}

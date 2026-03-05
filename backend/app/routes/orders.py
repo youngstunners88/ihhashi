@@ -1,59 +1,52 @@
 """
-Order API routes - Full implementation with MongoDB
+Order API routes - Production ready with MongoDB transactions
 SECURITY: Rate limiting, atomic operations, input validation
 CONCURRENCY: MongoDB transactions for order creation
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from bson import ObjectId
+import logging
 
 from app.services.auth import get_current_user
 from app.models import (
     Order, OrderCreate, OrderStatus, OrderStatusUpdate,
     OrderItem, DeliveryInfo, User, UserRole
 )
-from app.database import get_collection, client
-from app.utils.validation import safe_object_id
+from app.database import get_collection, database
+from app.utils.validation import (
+    safe_object_id, validate_order_notes, validate_sa_coordinates,
+    is_nosql_injection_attempt, sanitize_search_query
+)
 from app.middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+logger = logging.getLogger(__name__)
 
 # Constants for validation
 MAX_QUANTITY_PER_ITEM = 99
 MAX_NOTES_LENGTH = 500
+MAX_ORDER_ITEMS = 50
 
 
-def validate_location(lat: Optional[float], lng: Optional[float]) -> bool:
-    """Validate latitude and longitude coordinates"""
+class OrderCancellationRequest(BaseModel):
+    reason: Optional[str] = Field(None, max_length=200)
+
+
+def validate_coordinates(lat: Optional[float], lng: Optional[float]) -> bool:
+    """Validate latitude and longitude coordinates are within valid ranges"""
     if lat is None or lng is None:
         return True  # Optional fields
-    return -90 <= lat <= 90 and -180 <= lng <= 180
-
-
-def sanitize_notes(notes: Optional[str]) -> Optional[str]:
-    """Sanitize buyer notes - strip HTML and limit length"""
-    if not notes:
-        return None
-    # Strip potential HTML tags (basic sanitization)
-    import re
-    clean = re.sub(r'<[^>]+>', '', notes)
-    return clean[:MAX_NOTES_LENGTH].strip()
-
-
-def order_from_doc(doc: dict) -> dict:
-    """Convert MongoDB doc to order dict"""
-    if doc:
-        doc["id"] = str(doc.get("_id", doc.get("id")))
-    return doc
+    try:
+        return -90 <= float(lat) <= 90 and -180 <= float(lng) <= 180
+    except (TypeError, ValueError):
+        return False
 
 
 async def calculate_delivery_fee(store_location: dict, delivery_location: dict) -> float:
     """Calculate delivery fee based on distance"""
-    # Base fee: R15
-    # Per km: R8
-    # Max distance: 15km
-    
     import math
     
     lat1 = store_location.get("latitude", 0)
@@ -62,8 +55,13 @@ async def calculate_delivery_fee(store_location: dict, delivery_location: dict) 
     lon2 = delivery_location.get("longitude", 0)
     
     # Validate coordinates
-    if not validate_location(lat1, lon1) or not validate_location(lat2, lon2):
+    if not validate_coordinates(lat1, lon1) or not validate_coordinates(lat2, lon2):
         return 30.0  # Default fee if invalid coordinates
+    
+    # Validate coordinates are in South Africa
+    if not validate_sa_coordinates(lat2, lon2):
+        logger.warning(f"Delivery location outside SA: {lat2}, {lon2}")
+        return 30.0
     
     # Haversine formula
     R = 6371  # Earth radius in km
@@ -81,54 +79,33 @@ async def calculate_delivery_fee(store_location: dict, delivery_location: dict) 
     return min(fee, 150.0)  # Cap at R150
 
 
-async def find_nearest_available_rider(lat: float, lng: float, max_distance_km: float = 5.0):
-    """Find the nearest available rider"""
-    drivers_col = get_collection("drivers")
-    
-    # Validate coordinates before query
-    if not validate_location(lat, lng):
-        return None
-    
-    # Geo query for nearby available drivers
-    pipeline = [
-        {
-            "$geoNear": {
-                "near": {"type": "Point", "coordinates": [lng, lat]},
-                "distanceField": "distance",
-                "maxDistance": max_distance_km * 1000,  # Convert to meters
-                "query": {"status": "available"},
-                "spherical": True
-            }
-        },
-        {"$limit": 1}
-    ]
-    
-    # Fallback if no geo index
-    try:
-        cursor = drivers_col.aggregate(pipeline)
-        riders = await cursor.to_list(length=1)
-        if riders:
-            return riders[0]
-    except Exception:
-        pass
-    
-    # Simple fallback - find any available driver
-    rider = await drivers_col.find_one({"status": "available"})
-    return rider
-
-
 @router.post("/", response_model=dict)
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")  # Stricter rate limit for order creation
 async def create_order(
     request: Request,
     order_data: OrderCreate,
     current_user: User = Depends(get_current_user)
 ):
-    """Create a new order with atomic stock management"""
+    """
+    Create a new order with atomic stock management using MongoDB transactions.
+    
+    Uses transactions to ensure stock consistency across concurrent requests.
+    """
     orders_col = get_collection("orders")
     buyers_col = get_collection("buyers")
     products_col = get_collection("products")
     stores_col = get_collection("stores")
+    
+    # Validate item count
+    if len(order_data.items) > MAX_ORDER_ITEMS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum {MAX_ORDER_ITEMS} items per order allowed"
+        )
+    
+    # Validate store_id for NoSQL injection
+    if is_nosql_injection_attempt(order_data.store_id):
+        raise HTTPException(status_code=400, detail="Invalid store ID format")
     
     # Validate buyer exists
     buyer = await buyers_col.find_one({"id": current_user.id})
@@ -146,123 +123,156 @@ async def create_order(
         raise HTTPException(status_code=400, detail="Delivery address not found")
     
     # Validate delivery location coordinates
-    if not validate_location(
+    if not validate_coordinates(
         delivery_address.get("latitude"),
         delivery_address.get("longitude")
     ):
         raise HTTPException(status_code=400, detail="Invalid delivery coordinates")
     
-    # Get store info - using safe ObjectId
-    try:
-        store = await stores_col.find_one({"_id": safe_object_id(order_data.store_id)})
-    except HTTPException:
-        raise HTTPException(status_code=404, detail="Store not found")
+    # Validate coordinates are in South Africa
+    if not validate_sa_coordinates(
+        delivery_address.get("latitude"),
+        delivery_address.get("longitude")
+    ):
+        raise HTTPException(status_code=400, detail="Delivery address must be in South Africa")
     
+    # Get store info - using safe ObjectId
+    store_id = safe_object_id(order_data.store_id)
+    if not store_id:
+        raise HTTPException(status_code=400, detail="Invalid store ID format")
+    
+    store = await stores_col.find_one({"_id": store_id})
     if not store:
         raise HTTPException(status_code=404, detail="Store not found")
     
+    # Validate store is active
+    if not store.get("is_active", True):
+        raise HTTPException(status_code=400, detail="Store is currently not accepting orders")
+    
     # Validate quantity limits upfront
     for item in order_data.items:
-        if item.get("quantity", 0) > MAX_QUANTITY_PER_ITEM:
+        product_id = item.get("product_id", "")
+        
+        # Validate product_id for NoSQL injection
+        if is_nosql_injection_attempt(product_id):
+            raise HTTPException(status_code=400, detail="Invalid product ID format")
+        
+        quantity = item.get("quantity", 0)
+        if quantity > MAX_QUANTITY_PER_ITEM:
             raise HTTPException(
                 status_code=400,
                 detail=f"Maximum {MAX_QUANTITY_PER_ITEM} items per product allowed"
             )
-        if item.get("quantity", 0) < 1:
+        if quantity < 1:
             raise HTTPException(
                 status_code=400,
                 detail="Quantity must be at least 1"
             )
     
     # Sanitize buyer notes
-    buyer_notes = sanitize_notes(order_data.buyer_notes)
+    buyer_notes = validate_order_notes(order_data.buyer_notes)
     
-    # ATOMIC STOCK MANAGEMENT - Use find_one_and_update for each item
-    # This prevents race conditions where multiple orders check stock simultaneously
-    items = []
-    subtotal = 0.0
-    stock_updates = []  # Track for rollback if needed
+    # Use MongoDB transaction for atomic order creation
+    client = database.client
     
-    for item in order_data.items:
-        # Atomic stock check and decrement
-        # Only succeeds if stock is sufficient
-        product = await products_col.find_one_and_update(
-            {
-                "_id": safe_object_id(item["product_id"]),
-                "store_id": order_data.store_id,
-                "stock_quantity": {"$gte": item["quantity"]}  # Atomic condition
-            },
-            {"$inc": {"stock_quantity": -item["quantity"]}},
-            return_document=True
-        )
-        
-        if not product:
-            # ROLLBACK: Restore stock for previously processed items
-            for prod_id, qty in stock_updates:
-                await products_col.update_one(
-                    {"_id": prod_id},
-                    {"$inc": {"stock_quantity": qty}}
+    try:
+        async with await client.start_session() as session:
+            async with session.start_transaction():
+                # Atomic stock check and decrement within transaction
+                items = []
+                subtotal = 0.0
+                
+                for item in order_data.items:
+                    product_oid = safe_object_id(item["product_id"])
+                    if not product_oid:
+                        raise HTTPException(status_code=400, detail=f"Invalid product ID: {item['product_id']}")
+                    
+                    # Atomic stock check and decrement within transaction
+                    product = await products_col.find_one_and_update(
+                        {
+                            "_id": product_oid,
+                            "store_id": order_data.store_id,
+                            "is_available": True,
+                            "stock_quantity": {"$gte": item["quantity"]}
+                        },
+                        {"$inc": {"stock_quantity": -item["quantity"]}},
+                        return_document=True,
+                        session=session
+                    )
+                    
+                    if not product:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Product not available or insufficient stock: {item['product_id']}"
+                        )
+                    
+                    item_total = product["price"] * item["quantity"]
+                    items.append({
+                        "product_id": item["product_id"],
+                        "product_name": product["name"],
+                        "quantity": item["quantity"],
+                        "unit_price": product["price"],
+                        "total_price": item_total
+                    })
+                    subtotal += item_total
+                
+                # Calculate delivery fee
+                delivery_fee = await calculate_delivery_fee(
+                    store.get("location", {}),
+                    delivery_address
                 )
-            raise HTTPException(
-                status_code=400,
-                detail=f"Insufficient stock for product {item['product_id']}"
-            )
-        
-        stock_updates.append((product["_id"], item["quantity"]))
-        
-        item_total = product["price"] * item["quantity"]
-        items.append({
-            "product_id": item["product_id"],
-            "product_name": product["name"],
-            "quantity": item["quantity"],
-            "unit_price": product["price"],
-            "total_price": item_total
-        })
-        subtotal += item_total
+                
+                # Create order document
+                order_doc = {
+                    "buyer_id": current_user.id,
+                    "store_id": order_data.store_id,
+                    "items": items,
+                    "subtotal": round(subtotal, 2),
+                    "delivery_fee": round(delivery_fee, 2),
+                    "total": round(subtotal + delivery_fee, 2),
+                    "currency": "ZAR",
+                    "status": OrderStatus.PENDING.value,
+                    "status_history": [{
+                        "status": OrderStatus.PENDING.value,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "by": current_user.id
+                    }],
+                    "delivery_info": {
+                        "address_label": delivery_address.get("label", ""),
+                        "address_line1": delivery_address.get("address_line1", ""),
+                        "address_line2": delivery_address.get("address_line2"),
+                        "city": delivery_address.get("city", ""),
+                        "area": delivery_address.get("area"),
+                        "latitude": delivery_address.get("latitude"),
+                        "longitude": delivery_address.get("longitude"),
+                        "delivery_instructions": delivery_address.get("delivery_instructions"),
+                        "recipient_phone": buyer.get("phone_number", "")
+                    },
+                    "created_at": datetime.utcnow(),
+                    "payment_method": order_data.payment_method,
+                    "payment_status": "pending",
+                    "buyer_notes": buyer_notes,
+                    "metadata": {
+                        "user_agent": request.headers.get("user-agent"),
+                        "ip_address": request.client.host if request.client else None
+                    }
+                }
+                
+                result = await orders_col.insert_one(order_doc, session=session)
+                order_doc["id"] = str(result.inserted_id)
+                
+                # Transaction commits automatically
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Order creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create order. Please try again.")
     
-    # Calculate delivery fee
-    delivery_fee = await calculate_delivery_fee(
-        store.get("location", {}),
-        delivery_address
-    )
+    # TODO: Send notification to merchant (outside transaction)
+    # TODO: Initiate payment if card/wallet (outside transaction)
     
-    # Create order document
-    order_doc = {
-        "buyer_id": current_user.id,
-        "store_id": order_data.store_id,
-        "items": items,
-        "subtotal": subtotal,
-        "delivery_fee": delivery_fee,
-        "total": subtotal + delivery_fee,
-        "currency": "ZAR",
-        "status": OrderStatus.PENDING.value,
-        "status_history": [{
-            "status": OrderStatus.PENDING.value,
-            "timestamp": datetime.utcnow().isoformat(),
-            "by": current_user.id
-        }],
-        "delivery_info": {
-            "address_label": delivery_address.get("label", ""),
-            "address_line1": delivery_address.get("address_line1", ""),
-            "address_line2": delivery_address.get("address_line2"),
-            "city": delivery_address.get("city", ""),
-            "area": delivery_address.get("area"),
-            "latitude": delivery_address.get("latitude"),
-            "longitude": delivery_address.get("longitude"),
-            "delivery_instructions": delivery_address.get("delivery_instructions"),
-            "recipient_phone": buyer.get("phone_number", "")
-        },
-        "created_at": datetime.utcnow(),
-        "payment_method": order_data.payment_method,
-        "payment_status": "pending",
-        "buyer_notes": buyer_notes
-    }
-    
-    result = await orders_col.insert_one(order_doc)
-    order_doc["id"] = str(result.inserted_id)
-    
-    # TODO: Send notification to merchant
-    # TODO: Initiate payment if card/wallet
+    logger.info(f"Order created: {order_doc['id']} by user {current_user.id}")
     
     return {
         "message": "Order created successfully",
@@ -280,24 +290,47 @@ async def get_order(
     order_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Get order details"""
+    """Get order details with access control"""
     orders_col = get_collection("orders")
     
+    # Validate order_id
+    if is_nosql_injection_attempt(order_id):
+        raise HTTPException(status_code=400, detail="Invalid order ID format")
+    
     order = None
-    try:
-        order = await orders_col.find_one({"_id": safe_object_id(order_id)})
-    except HTTPException:
+    order_oid = safe_object_id(order_id)
+    
+    if order_oid:
+        order = await orders_col.find_one({"_id": order_oid})
+    
+    if not order:
+        # Try by string ID
         order = await orders_col.find_one({"id": order_id})
     
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Check access
-    if order["buyer_id"] != current_user.id and order.get("rider_id") != current_user.id:
-        if order["store_id"] != current_user.id and current_user.role != UserRole.ADMIN:
-            raise HTTPException(status_code=403, detail="Access denied")
+    # Check access permissions
+    is_buyer = order["buyer_id"] == current_user.id
+    is_rider = order.get("rider_id") == current_user.id
+    is_merchant = order["store_id"] == current_user.id
+    is_admin = current_user.role == UserRole.ADMIN
     
-    order["id"] = str(order["_id"])
+    if not (is_buyer or is_rider or is_merchant or is_admin):
+        raise HTTPException(status_code=403, detail="Access denied to this order")
+    
+    # Convert ObjectId to string
+    order["id"] = str(order.get("_id", order_id))
+    if "_id" in order:
+        del order["_id"]
+    
+    # Filter sensitive data based on role
+    if not (is_buyer or is_admin):
+        # Remove sensitive delivery info for non-buyers
+        if "delivery_info" in order:
+            order["delivery_info"].pop("delivery_instructions", None)
+            order["delivery_info"].pop("recipient_phone", None)
+    
     return {"order": order}
 
 
@@ -307,19 +340,30 @@ async def track_order(
     request: Request,
     order_id: str
 ):
-    """Track order status and rider location (public endpoint for order page)"""
+    """
+    Track order status and rider location (public endpoint for order page).
+    Rate limited to prevent enumeration attacks.
+    """
     orders_col = get_collection("orders")
     drivers_col = get_collection("drivers")
     
+    # Validate order_id
+    if is_nosql_injection_attempt(order_id):
+        raise HTTPException(status_code=400, detail="Invalid order ID format")
+    
     order = None
-    try:
-        order = await orders_col.find_one({"_id": safe_object_id(order_id)})
-    except HTTPException:
+    order_oid = safe_object_id(order_id)
+    
+    if order_oid:
+        order = await orders_col.find_one({"_id": order_oid})
+    
+    if not order:
         order = await orders_col.find_one({"id": order_id})
     
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
+    # Build public response
     response = {
         "order_id": order_id,
         "status": order["status"],
@@ -329,22 +373,25 @@ async def track_order(
         "rider_location": None
     }
     
-    # If rider assigned, get their details
+    # If rider assigned, get their public details
     if order.get("rider_id"):
         rider = await drivers_col.find_one({"id": order["rider_id"]})
         if rider:
             response["rider"] = {
                 "name": rider.get("full_name", "Driver"),
-                "phone": rider.get("phone"),
                 "rating": rider.get("rating", 5.0),
-                "vehicle": rider.get("vehicle", {})
+                "vehicle_type": rider.get("vehicle", {}).get("type", "bike")
+                # Note: Phone is intentionally NOT exposed here
             }
             
+            # Only show approximate location for privacy
             if rider.get("current_location"):
+                loc = rider["current_location"]
+                # Round to 3 decimal places (~100m precision) for privacy
                 response["rider_location"] = {
-                    "latitude": rider["current_location"].get("latitude"),
-                    "longitude": rider["current_location"].get("longitude"),
-                    "last_updated": rider["current_location"].get("last_updated")
+                    "latitude": round(loc.get("latitude", 0), 3),
+                    "longitude": round(loc.get("longitude", 0), 3),
+                    "last_updated": loc.get("last_updated")
                 }
     
     return response
@@ -361,10 +408,17 @@ async def update_order_status(
     """Update order status (merchant/rider only)"""
     orders_col = get_collection("orders")
     
+    # Validate order_id
+    if is_nosql_injection_attempt(order_id):
+        raise HTTPException(status_code=400, detail="Invalid order ID format")
+    
     order = None
-    try:
-        order = await orders_col.find_one({"_id": safe_object_id(order_id)})
-    except HTTPException:
+    order_oid = safe_object_id(order_id)
+    
+    if order_oid:
+        order = await orders_col.find_one({"_id": order_oid})
+    
+    if not order:
         order = await orders_col.find_one({"id": order_id})
     
     if not order:
@@ -374,6 +428,13 @@ async def update_order_status(
     valid_roles = [UserRole.MERCHANT, UserRole.DRIVER, UserRole.ADMIN]
     if current_user.role not in valid_roles:
         raise HTTPException(status_code=403, detail="Not authorized to update order status")
+    
+    # Verify user owns the order or is admin
+    if current_user.role == UserRole.MERCHANT and order["store_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized for this order")
+    
+    if current_user.role == UserRole.DRIVER and order.get("rider_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Not assigned to this order")
     
     # Validate status transition
     current_status = OrderStatus(order["status"])
@@ -407,11 +468,11 @@ async def update_order_status(
         "status": new_status.value,
         "timestamp": datetime.utcnow().isoformat(),
         "by": current_user.id,
-        "notes": sanitize_notes(status_update.notes)
+        "notes": validate_order_notes(status_update.notes)
     }
     
     await orders_col.update_one(
-        {"_id": order["_id"]},
+        {"_id": order.get("_id") or order.get("id")},
         {
             "$set": update_doc,
             "$push": {"status_history": status_entry}
@@ -421,10 +482,10 @@ async def update_order_status(
     # If delivered, update stats
     if new_status == OrderStatus.DELIVERED:
         await orders_col.update_one(
-            {"_id": order["_id"]},
+            {"_id": order.get("_id") or order.get("id")},
             {"$set": {"delivered_at": datetime.utcnow()}}
         )
-        # TODO: Update buyer stats, rider earnings, store stats
+        logger.info(f"Order delivered: {order_id}")
     
     return {
         "message": "Status updated",
@@ -438,11 +499,11 @@ async def update_order_status(
 async def get_orders(
     request: Request,
     status: Optional[OrderStatus] = None,
-    limit: int = Query(20, le=100),
+    limit: int = Query(20, le=100, ge=1),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user)
 ):
-    """Get orders based on user role"""
+    """Get orders based on user role with pagination"""
     orders_col = get_collection("orders")
     
     # Build query based on role
@@ -462,12 +523,28 @@ async def get_orders(
     # Get total count
     total = await orders_col.count_documents(query)
     
-    # Get orders
-    cursor = orders_col.find(query).sort("created_at", -1).skip(offset).limit(limit)
+    # Get orders with projection for performance
+    cursor = orders_col.find(
+        query,
+        projection={
+            "_id": 1,
+            "buyer_id": 1,
+            "store_id": 1,
+            "rider_id": 1,
+            "items": {"$slice": 3},  # Limit items per order
+            "total": 1,
+            "status": 1,
+            "created_at": 1,
+            "delivery_info.city": 1,
+            "delivery_info.area": 1
+        }
+    ).sort("created_at", -1).skip(offset).limit(limit)
+    
     orders = await cursor.to_list(length=limit)
     
+    # Convert ObjectIds
     for order in orders:
-        order["id"] = str(order["_id"])
+        order["id"] = str(order.pop("_id"))
     
     return {
         "orders": orders,
@@ -478,21 +555,28 @@ async def get_orders(
 
 
 @router.post("/{order_id}/cancel")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")  # Very strict limit for cancellations
 async def cancel_order(
     request: Request,
     order_id: str,
-    reason: Optional[str] = None,
+    cancellation: OrderCancellationRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Cancel an order (buyer only, before rider pickup)"""
     orders_col = get_collection("orders")
     products_col = get_collection("products")
     
+    # Validate order_id
+    if is_nosql_injection_attempt(order_id):
+        raise HTTPException(status_code=400, detail="Invalid order ID format")
+    
     order = None
-    try:
-        order = await orders_col.find_one({"_id": safe_object_id(order_id)})
-    except HTTPException:
+    order_oid = safe_object_id(order_id)
+    
+    if order_oid:
+        order = await orders_col.find_one({"_id": order_oid})
+    
+    if not order:
         order = await orders_col.find_one({"id": order_id})
     
     if not order:
@@ -510,39 +594,55 @@ async def cancel_order(
         )
     
     # Sanitize reason
-    safe_reason = sanitize_notes(reason)
+    safe_reason = validate_order_notes(cancellation.reason)
     
-    # Update order
-    status_entry = {
-        "status": OrderStatus.CANCELLED.value,
-        "timestamp": datetime.utcnow().isoformat(),
-        "by": current_user.id,
-        "notes": f"Cancelled by buyer. Reason: {safe_reason or 'Not specified'}"
-    }
+    # Use transaction for atomic cancellation
+    client = database.client
     
-    await orders_col.update_one(
-        {"_id": order["_id"]},
-        {
-            "$set": {
-                "status": OrderStatus.CANCELLED.value,
-                "cancelled_at": datetime.utcnow(),
-                "cancellation_reason": safe_reason
-            },
-            "$push": {"status_history": status_entry}
-        }
-    )
+    try:
+        async with await client.start_session() as session:
+            async with session.start_transaction():
+                # Update order
+                status_entry = {
+                    "status": OrderStatus.CANCELLED.value,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "by": current_user.id,
+                    "notes": f"Cancelled by buyer. Reason: {safe_reason or 'Not specified'}"
+                }
+                
+                await orders_col.update_one(
+                    {"_id": order.get("_id")},
+                    {
+                        "$set": {
+                            "status": OrderStatus.CANCELLED.value,
+                            "cancelled_at": datetime.utcnow(),
+                            "cancellation_reason": safe_reason
+                        },
+                        "$push": {"status_history": status_entry}
+                    },
+                    session=session
+                )
+                
+                # RESTORE STOCK for cancelled order
+                for item in order.get("items", []):
+                    product_oid = safe_object_id(item.get("product_id"))
+                    if product_oid:
+                        await products_col.update_one(
+                            {"_id": product_oid},
+                            {"$inc": {"stock_quantity": item["quantity"]}},
+                            session=session
+                        )
     
-    # RESTORE STOCK for cancelled order
-    for item in order.get("items", []):
-        await products_col.update_one(
-            {"_id": safe_object_id(item["product_id"])},
-            {"$inc": {"stock_quantity": item["quantity"]}}
-        )
+    except Exception as e:
+        logger.error(f"Order cancellation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to cancel order")
     
-    # TODO: Refund if paid
+    logger.info(f"Order cancelled: {order_id} by user {current_user.id}")
+    
+    # TODO: Refund if paid (trigger async refund process)
     
     return {
         "message": "Order cancelled",
         "order_id": order_id,
-        "refund_amount": order["total"] if order["payment_status"] == "paid" else 0
+        "refund_amount": order["total"] if order.get("payment_status") == "paid" else 0
     }
