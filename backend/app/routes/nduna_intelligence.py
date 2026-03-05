@@ -6,6 +6,7 @@ Integrates route memory with Nduna chatbot for:
 - Best route suggestions
 - Community insight alerts
 - Driver performance analytics
+- Route optimization (FREE for all drivers)
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -14,6 +15,7 @@ from typing import Optional, List, Dict, Any
 from bson import ObjectId
 import math
 import json
+from pydantic import BaseModel
 
 from app.database import get_collection
 from app.models.route_memory import (
@@ -21,6 +23,14 @@ from app.models.route_memory import (
 )
 from app.models.community import (
     ValidationStatus, ReputationLevel
+)
+from app.services.route_optimizer import (
+    optimize_route_vrp,
+    optimize_route_greedy,
+    optimize_multi_pickup_route,
+    optimize_from_orders,
+    estimate_optimization_savings,
+    DeliveryStop
 )
 
 router = APIRouter(prefix="/nduna-intelligence", tags=["nduna-integration"])
@@ -632,6 +642,197 @@ async def get_intelligence_dashboard():
 
 
 # ============================================================================
+# ROUTE OPTIMIZATION ENDPOINTS (FREE FOR ALL DRIVERS)
+# ============================================================================
+
+class RouteOptimizationRequest(BaseModel):
+    """Request for route optimization"""
+    stops: List[Dict[str, Any]]  # [{id, name, lat, lng, priority?, time_window?}]
+    driver_lat: float
+    driver_lng: float
+    avg_speed_kmh: float = 30.0
+
+
+class MultiPickupRequest(BaseModel):
+    """Request for multi-pickup optimization"""
+    pickups: List[Dict[str, Any]]  # [{order_id, lat, lng, merchant_name}]
+    deliveries: List[Dict[str, Any]]  # [{order_id, lat, lng, customer_name}]
+    driver_lat: float
+    driver_lng: float
+
+
+class OrderOptimizationRequest(BaseModel):
+    """Request for optimization from order objects"""
+    orders: List[Dict[str, Any]]
+    driver_lat: float
+    driver_lng: float
+
+
+@router.post("/optimize-route")
+async def optimize_route(request: RouteOptimizationRequest):
+    """
+    Optimize delivery route for multiple stops.
+    
+    FREE for all Nduna drivers - no subscription required.
+    
+    Uses Google OR-Tools for optimal routing:
+    - Minimizes total travel time
+    - Respects time windows if provided
+    - Handles up to 25 stops efficiently
+    
+    Returns optimized stop order with:
+    - Distance and time between stops
+    - Total route metrics
+    - Estimated savings vs original order
+    """
+    if not request.stops:
+        raise HTTPException(status_code=400, detail="No stops provided")
+    
+    if len(request.stops) > 50:
+        raise HTTPException(
+            status_code=400, 
+            detail="Maximum 50 stops allowed. Contact support for enterprise routing."
+        )
+    
+    # Convert to DeliveryStop objects
+    stops = []
+    for s in request.stops:
+        stop = DeliveryStop(
+            id=s.get("id", str(len(stops))),
+            name=s.get("name", f"Stop {len(stops) + 1}"),
+            lat=s["lat"],
+            lng=s["lng"],
+            time_window_start=s.get("time_window_start"),
+            time_window_end=s.get("time_window_end"),
+            service_time_minutes=s.get("service_time_minutes", 5),
+            priority=s.get("priority", 0)
+        )
+        stops.append(stop)
+    
+    try:
+        result = optimize_route_vrp(
+            stops=stops,
+            start_lat=request.driver_lat,
+            start_lng=request.driver_lng,
+            avg_speed_kmh=request.avg_speed_kmh
+        )
+        
+        return {
+            "success": True,
+            "optimized_route": {
+                "stops": result.stops,
+                "total_distance_m": result.total_distance_m,
+                "total_distance_km": round(result.total_distance_m / 1000, 2),
+                "total_time_minutes": result.total_time_minutes,
+                "total_service_time_minutes": result.total_service_time_minutes,
+                "savings_vs_original_minutes": result.savings_vs_original_minutes,
+                "confidence": result.confidence
+            },
+            "message": f"Route optimized! Saved {result.savings_vs_original_minutes} minutes compared to original order." if result.savings_vs_original_minutes > 0 else "Route optimized!",
+            "free_tier": True,
+            "pricing_note": "Route optimization is FREE for all Nduna drivers"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
+
+@router.post("/optimize-multi-pickup")
+async def optimize_multi_pickup(request: MultiPickupRequest):
+    """
+    Optimize route with multiple pickups and deliveries.
+    
+    Handles pickup-delivery pairing:
+    - Pickups are prioritized (happen before deliveries)
+    - Delivery follows its corresponding pickup
+    
+    Perfect for multi-store shopping orders.
+    """
+    if not request.pickups or not request.deliveries:
+        raise HTTPException(status_code=400, detail="Pickups and deliveries required")
+    
+    try:
+        result = optimize_multi_pickup_route(
+            pickups=request.pickups,
+            deliveries=request.deliveries,
+            driver_lat=request.driver_lat,
+            driver_lng=request.driver_lng
+        )
+        
+        return {
+            "success": True,
+            "optimized_route": {
+                "stops": result.stops,
+                "total_distance_km": round(result.total_distance_m / 1000, 2),
+                "total_time_minutes": result.total_time_minutes,
+                "savings_vs_original_minutes": result.savings_vs_original_minutes
+            },
+            "free_tier": True
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
+
+@router.post("/optimize-from-orders")
+async def optimize_orders_route(request: OrderOptimizationRequest):
+    """
+    Optimize route directly from order objects.
+    
+    Orders should have:
+    - id: Order ID
+    - merchant_name: For pickup name
+    - pickup_location: {lat, lng}
+    - customer_name: For delivery name
+    - delivery_location: {lat, lng}
+    """
+    if not request.orders:
+        raise HTTPException(status_code=400, detail="No orders provided")
+    
+    try:
+        result = optimize_from_orders(
+            orders=request.orders,
+            driver_lat=request.driver_lat,
+            driver_lng=request.driver_lng
+        )
+        
+        return {
+            "success": True,
+            "optimized_route": {
+                "stops": result.stops,
+                "total_distance_km": round(result.total_distance_m / 1000, 2),
+                "total_time_minutes": result.total_time_minutes,
+                "savings_vs_original_minutes": result.savings_vs_original_minutes
+            },
+            "free_tier": True
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
+
+@router.get("/estimate-savings")
+async def get_estimated_savings(
+    num_stops: int = Query(..., ge=1, le=100),
+    avg_distance_km: float = Query(default=2.0, ge=0.5, le=10.0)
+):
+    """
+    Estimate time savings from route optimization.
+    
+    Useful for showing drivers the value of optimization before they use it.
+    
+    Based on industry studies showing 10-30% savings from VRP optimization.
+    """
+    result = estimate_optimization_savings(num_stops, avg_distance_km)
+    
+    return {
+        "estimate": result,
+        "note": "Actual savings depend on stop locations and traffic conditions",
+        "free_tier": True
+    }
+
+
+# ============================================================================
 # HEALTH CHECK
 # ============================================================================
 
@@ -641,6 +842,14 @@ async def health_check():
     segments_count = await segments_collection().count_documents({})
     insights_count = await insights_collection().count_documents({})
     time_records_count = await time_records_collection().count_documents({})
+    
+    # Check if OR-Tools is available
+    ortools_available = False
+    try:
+        from ortools.constraint_solver import pywrapcp
+        ortools_available = True
+    except ImportError:
+        pass
     
     return {
         "status": "healthy",
@@ -653,6 +862,8 @@ async def health_check():
             "eta_calculation": "active",
             "route_suggestions": "active",
             "alerts": "active",
-            "driver_analytics": "active"
+            "driver_analytics": "active",
+            "route_optimization": "active" if ortools_available else "fallback_greedy",
+            "ortools_available": ortools_available
         }
     }
