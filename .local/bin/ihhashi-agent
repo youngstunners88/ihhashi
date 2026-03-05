@@ -1,0 +1,126 @@
+#!/bin/bash
+# iHhashi Agent Manager - Controls OpenFang + PinchTab
+
+export PATH="$HOME/.openfang/bin:$HOME/.local/bin:$HOME/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin"
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+show_help() {
+    cat << 'EOFHELP'
+╔═══════════════════════════════════════════════════════════════╗
+║              iHhashi Agent Manager (OpenFang)                 ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Commands:                                                    ║
+║                                                               ║
+║  start       - Start OpenFang and PinchTab services           ║
+║  stop        - Stop all services                              ║
+║  restart     - Restart services                               ║
+║  status      - Check service status                           ║
+║  logs        - View OpenFang logs                             ║
+║  config      - Edit configuration                             ║
+║  telegram    - Setup Telegram bot (requires token)            ║
+║  browse      - Quick browser command via PinchTab             ║
+║  search      - Search Google via PinchTab                     ║
+║  chat        - Send test message to Telegram bot              ║
+║  doctor      - Check system health                            ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+EOFHELP
+}
+
+case "$1" in
+    start)
+        echo "🚀 Starting iHhashi Agent..."
+        systemctl --user daemon-reload
+        systemctl --user start pinchtab.service
+        sleep 2
+        systemctl --user start openfang.service
+        echo "✅ Services started!"
+        echo ""
+        systemctl --user status openfang --no-pager
+        ;;
+    stop)
+        echo "🛑 Stopping iHhashi Agent..."
+        systemctl --user stop openfang.service
+        systemctl --user stop pinchtab.service
+        echo "✅ Services stopped!"
+        ;;
+    restart)
+        echo "🔄 Restarting iHhashi Agent..."
+        systemctl --user restart pinchtab.service
+        sleep 2
+        systemctl --user restart openfang.service
+        echo "✅ Services restarted!"
+        ;;
+    status)
+        echo "📊 Service Status:"
+        echo ""
+        echo "OpenFang:"
+        systemctl --user status openfang --no-pager 2>/dev/null | head -5 || echo "  Not running"
+        echo ""
+        echo "PinchTab:"
+        systemctl --user status pinchtab --no-pager 2>/dev/null | head -5 || echo "  Not running"
+        ;;
+    logs)
+        journalctl --user -u openfang -f
+        ;;
+    config)
+        ${EDITOR:-nano} ~/.config/openfang/config.toml
+        ;;
+    telegram)
+        if [ -z "$2" ]; then
+            echo "Usage: ihhashi-agent telegram <BOT_TOKEN>"
+            echo "Get your token from @BotFather on Telegram"
+            exit 1
+        fi
+        ~/.config/openfang/setup-telegram.sh "$2"
+        ;;
+    browse)
+        if [ -z "$2" ]; then
+            echo "Usage: ihhashi-agent browse <URL>"
+            exit 1
+        fi
+        ~/.config/openfang/tools/pinchtab.sh search "$2"
+        ;;
+    search)
+        if [ -z "$2" ]; then
+            echo "Usage: ihhashi-agent search <query>"
+            exit 1
+        fi
+        shift
+        ~/.config/openfang/tools/pinchtab.sh search "$*"
+        ;;
+    chat)
+        echo "💬 To chat with your agent:"
+        echo "1. Open Telegram"
+        echo "2. Find your bot (after setting up with 'ihhashi-agent telegram <token>')"
+        echo "3. Send any message!"
+        echo ""
+        echo "Your agent runs 24/7 and will respond immediately."
+        ;;
+    doctor)
+        echo "🔍 iHhashi Agent Health Check"
+        echo ""
+        echo "1. OpenFang binary:"
+        which openfang && openfang --version || echo "   ❌ Not found"
+        echo ""
+        echo "2. PinchTab binary:"
+        which pinchtab && pinchtab --version || echo "   ❌ Not found"
+        echo ""
+        echo "3. Node.js:"
+        node --version 2>/dev/null || echo "   ❌ Not found"
+        echo ""
+        echo "4. Configuration:"
+        [ -f ~/.config/openfang/config.toml ] && echo "   ✅ Config exists" || echo "   ❌ Config missing"
+        echo ""
+        echo "5. Services:"
+        systemctl --user is-active openfang >/dev/null 2>&1 && echo "   ✅ OpenFang running" || echo "   ⏹️  OpenFang stopped"
+        systemctl --user is-active pinchtab >/dev/null 2>&1 && echo "   ✅ PinchTab running" || echo "   ⏹️  PinchTab stopped"
+        echo ""
+        echo "6. Groq API:"
+        grep -q "gsk_" ~/.config/openfang/config.toml && echo "   ✅ API key configured" || echo "   ❌ API key missing"
+        ;;
+    *)
+        show_help
+        ;;
+esac

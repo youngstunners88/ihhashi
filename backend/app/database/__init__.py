@@ -269,6 +269,38 @@ def notifications_collection():
 # Import index management
 from app.database.indexes import ensure_indexes, get_index_stats, drop_all_indexes
 
+# Import operations when database is available
+try:
+    from app.database.operations import (
+        # Referrals
+        create_referral_code, get_referral_code_by_user, get_referral_code_by_code,
+        create_referral, complete_referral, get_referrals_by_referrer,
+        get_referral_stats, check_referral_eligibility,
+        
+        # Customer Rewards
+        create_customer_reward_account, get_customer_reward_account,
+        get_or_create_customer_reward_account, add_coins_to_customer,
+        spend_coins, get_coin_transactions, update_customer_tier,
+        get_customer_tier_info, redeem_coins_for_reward, get_customer_referral_history,
+        
+        # Vendor
+        extend_vendor_trial, get_vendor_referral_stats,
+        
+        # Orders
+        create_order, get_order_by_id, get_orders_by_buyer,
+        update_order_status, assign_driver_to_order,
+        
+        # Users
+        get_user_by_id, get_user_by_email, get_user_by_phone,
+        update_user, create_user,
+        
+        # Analytics
+        get_all_referral_stats, process_pending_referrals, get_top_referrers,
+    )
+    OPERATIONS_AVAILABLE = True
+except ImportError:
+    OPERATIONS_AVAILABLE = False
+
 __all__ = [
     "connect_db",
     "close_db",
@@ -291,4 +323,24 @@ __all__ = [
     "notifications_collection",
     "client",
     "database",
+    "OPERATIONS_AVAILABLE",
+    # Referral operations
+    "create_referral_code", "get_referral_code_by_user", "get_referral_code_by_code",
+    "create_referral", "complete_referral", "get_referrals_by_referrer",
+    "get_referral_stats", "check_referral_eligibility",
+    # Customer reward operations
+    "create_customer_reward_account", "get_customer_reward_account",
+    "get_or_create_customer_reward_account", "add_coins_to_customer",
+    "spend_coins", "get_coin_transactions", "update_customer_tier",
+    "get_customer_tier_info", "redeem_coins_for_reward", "get_customer_referral_history",
+    # Vendor operations
+    "extend_vendor_trial", "get_vendor_referral_stats",
+    # Order operations
+    "create_order", "get_order_by_id", "get_orders_by_buyer",
+    "update_order_status", "assign_driver_to_order",
+    # User operations
+    "get_user_by_id", "get_user_by_email", "get_user_by_phone",
+    "update_user", "create_user",
+    # Analytics operations
+    "get_all_referral_stats", "process_pending_referrals", "get_top_referrers",
 ]

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "approval": {
+    "yolo": false,
+    "auto_approve_actions": [
+      "run command",
+      "edit file"
+    ]
+  },
+  "dynamic_subagents": [],
+  "additional_dirs": []
+}

@@ -1,0 +1,20 @@
+[Unit]
+Description=PinchTab Browser Automation
+Documentation=https://pinchtab.com
+After=network.target
+
+[Service]
+Type=simple
+Environment="HOME=/home/teacherchris37"
+Environment="PATH=/home/teacherchris37/.local/bin:/home/teacherchris37/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="NVM_DIR=/home/teacherchris37/.nvm"
+Environment="PINCHTAB_BINARY_PATH=/home/teacherchris37/.pinchtab/bin/pinchtab-linux-x64"
+WorkingDirectory=/home/teacherchris37
+ExecStart=/home/teacherchris37/.nvm/versions/node/v20.20.0/bin/pinchtab
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

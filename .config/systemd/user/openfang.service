@@ -1,0 +1,23 @@
+[Unit]
+Description=OpenFang Agent OS - iHhashi Telegram Bot
+Documentation=https://openfang.sh/docs
+After=network.target pinchtab.service
+Wants=pinchtab.service
+
+[Service]
+Type=simple
+Environment="HOME=/home/teacherchris37"
+Environment="PATH=/home/teacherchris37/.config/openfang/tools:/home/teacherchris37/.openfang/bin:/home/teacherchris37/.local/bin:/home/teacherchris37/.nvm/versions/node/v20.20.0/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="NVM_DIR=/home/teacherchris37/.nvm"
+Environment="NODE_PATH=/home/teacherchris37/.nvm/versions/node/v20.20.0/lib/node_modules"
+Environment="PINCHTAB_BINARY_PATH=/home/teacherchris37/.pinchtab/bin/pinchtab-linux-x64"
+WorkingDirectory=/home/teacherchris37
+ExecStartPre=/bin/bash -c 'export NVM_DIR=/home/teacherchris37/.nvm && [ -s $NVM_DIR/nvm.sh ] && \. $NVM_DIR/nvm.sh && which pinchtab'
+ExecStart=/home/teacherchris37/.openfang/bin/openfang start
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

@@ -37,7 +37,7 @@ from httpx import AsyncClient, ASGITransport
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.main import app
-from app.database import get_collection, connect_db, close_db
+from app.database import get_collection
 from app.models import (
     User, UserCreate, UserRole,
     Order, OrderStatus, OrderItem, DeliveryInfo,
@@ -222,6 +222,26 @@ async def test_admin(clean_db) -> dict:
     return user_doc
 
 
+@pytest_asyncio.fixture
+async def test_customer(clean_db) -> dict:
+    """Create a test customer user for rewards testing."""
+    users_col = get_collection("users")
+    user_doc = {
+        "_id": ObjectId(),
+        "email": "customer@test.com",
+        "phone": "+27821234571",
+        "full_name": "Test Customer",
+        "hashed_password": get_password_hash(TEST_PASSWORD),
+        "role": UserRole.BUYER,
+        "is_active": True,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    await users_col.insert_one(user_doc)
+    user_doc["id"] = str(user_doc["_id"])
+    return user_doc
+
+
 # ============ AUTH FIXTURES ============
 
 @pytest.fixture
@@ -269,6 +289,16 @@ async def admin_auth_headers(test_admin) -> dict:
     """Generate auth headers for admin."""
     token = create_access_token(
         data={"sub": test_admin["id"], "role": test_admin["role"]},
+        expires_delta=timedelta(hours=1)
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+async def customer_auth_headers(test_customer) -> dict:
+    """Generate auth headers for customer."""
+    token = create_access_token(
+        data={"sub": test_customer["id"], "role": test_customer["role"]},
         expires_delta=timedelta(hours=1)
     )
     return {"Authorization": f"Bearer {token}"}
@@ -424,6 +454,67 @@ async def test_order_confirmed(clean_db, test_order) -> dict:
     return test_order
 
 
+# ============ REFERRAL FIXTURES ============
+
+@pytest_asyncio.fixture
+async def test_referral_code(clean_db, test_customer) -> dict:
+    """Create a test referral code."""
+    referral_codes_col = get_collection("referral_codes")
+    referral_code_doc = {
+        "_id": ObjectId(),
+        "user_id": test_customer["id"],
+        "code": "IH-C-TEST12",
+        "referral_type": "customer",
+        "is_active": True,
+        "created_at": datetime.utcnow()
+    }
+    await referral_codes_col.insert_one(referral_code_doc)
+    referral_code_doc["id"] = str(referral_code_doc["_id"])
+    return referral_code_doc
+
+
+@pytest_asyncio.fixture
+async def test_vendor_referral_code(clean_db, test_merchant) -> dict:
+    """Create a test vendor referral code."""
+    referral_codes_col = get_collection("referral_codes")
+    referral_code_doc = {
+        "_id": ObjectId(),
+        "user_id": test_merchant["id"],
+        "code": "IH-V-TEST12",
+        "referral_type": "vendor",
+        "is_active": True,
+        "created_at": datetime.utcnow()
+    }
+    await referral_codes_col.insert_one(referral_code_doc)
+    referral_code_doc["id"] = str(referral_code_doc["_id"])
+    return referral_code_doc
+
+
+@pytest_asyncio.fixture
+async def test_customer_reward_account(clean_db, test_customer) -> dict:
+    """Create a test customer reward account."""
+    reward_accounts_col = get_collection("customer_reward_accounts")
+    account_doc = {
+        "_id": ObjectId(),
+        "customer_id": test_customer["id"],
+        "referral_code": "IH-C-TEST12",
+        "tier": "bronze",
+        "hashi_coins_balance": 100,
+        "total_coins_earned": 150,
+        "total_coins_spent": 50,
+        "total_referrals": 2,
+        "completed_referrals": 2,
+        "pending_referrals": 0,
+        "free_delivery_credits": 1,
+        "discount_credits": 15.0,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    await reward_accounts_col.insert_one(account_doc)
+    account_doc["id"] = str(account_doc["_id"])
+    return account_doc
+
+
 # ============ PAYMENT FIXTURES ============
 
 @pytest_asyncio.fixture
@@ -489,19 +580,61 @@ def mock_paystack():
                 "account_number": "1234567890"
             }
         })
+        instance.refund_payment = AsyncMock(return_value={
+            "status": True,
+            "data": {
+                "id": "ref_test123",
+                "status": "processed"
+            }
+        })
         yield instance
 
 
 @pytest.fixture
 def mock_redis():
     """Mock Redis for token blacklist."""
-    with patch("redis.Redis") as mock:
-        instance = mock.return_value
+    with patch("app.core.redis_client.redis_client") as mock:
+        instance = MagicMock()
         instance.get = MagicMock(return_value=None)
         instance.set = MagicMock(return_value=True)
         instance.delete = MagicMock(return_value=True)
         instance.exists = MagicMock(return_value=False)
+        mock.return_value = instance
         yield instance
+
+
+@pytest.fixture
+def mock_token_blacklist():
+    """Mock TokenBlacklist."""
+    with patch("app.core.redis_client.TokenBlacklist") as mock:
+        mock.is_blacklisted = AsyncMock(return_value=False)
+        mock.add = AsyncMock(return_value=True)
+        yield mock
+
+
+# ============ WEBSOCKET FIXTURES ============
+
+@pytest.fixture
+def websocket_token(test_user):
+    """Generate a valid WebSocket token."""
+    return create_access_token(
+        data={"sub": test_user["id"], "role": test_user["role"]},
+        expires_delta=timedelta(hours=1)
+    )
+
+
+@pytest.fixture
+def mock_websocket_manager():
+    """Mock WebSocket connection manager."""
+    with patch("app.routes.websocket.manager") as mock:
+        mock.connect_order_tracker = AsyncMock()
+        mock.connect_rider = AsyncMock()
+        mock.connect_user = AsyncMock()
+        mock.disconnect = MagicMock()
+        mock.broadcast_order_update = AsyncMock()
+        mock.send_to_rider = AsyncMock()
+        mock.send_to_user = AsyncMock()
+        yield mock
 
 
 # ============ HELPER FUNCTIONS ============

@@ -23,7 +23,7 @@ from conftest import TEST_PASSWORD
 
 from app.services.auth import (
     verify_password, get_password_hash, create_access_token,
-    authenticate_user, get_current_user
+    authenticate_user, get_current_user, create_refresh_token
 )
 from app.models import UserRole, User
 
@@ -123,6 +123,24 @@ class TestJWTToken:
         
         # Allow 10 second tolerance
         assert abs((exp - expected_exp).total_seconds()) < 10
+    
+    def test_create_refresh_token(self):
+        """Verify refresh token is created."""
+        user_id = str(ObjectId())
+        role = UserRole.BUYER
+        
+        token = create_refresh_token(
+            data={"sub": user_id, "role": role}
+        )
+        
+        assert token is not None
+        assert isinstance(token, str)
+        
+        # Verify it's a refresh token
+        from jose import jwt
+        from app.config import settings
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        assert payload["type"] == "refresh"
 
 
 # ============ REGISTRATION TESTS ============
@@ -134,7 +152,7 @@ class TestRegistration:
     async def test_register_new_user_success(self, async_client: AsyncClient, clean_db):
         """Test successful user registration."""
         response = await async_client.post(
-            "/api/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": "newuser@test.com",
                 "phone": "+27829999999",
@@ -153,7 +171,7 @@ class TestRegistration:
     async def test_register_duplicate_email_fails(self, async_client: AsyncClient, test_user):
         """Test registration with existing email fails."""
         response = await async_client.post(
-            "/api/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": test_user["email"],  # Same email
                 "phone": "+27828888888",
@@ -170,7 +188,7 @@ class TestRegistration:
     async def test_register_invalid_email_fails(self, async_client: AsyncClient, clean_db):
         """Test registration with invalid email format fails."""
         response = await async_client.post(
-            "/api/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": "notanemail",
                 "phone": "+27827777777",
@@ -186,7 +204,7 @@ class TestRegistration:
     async def test_register_short_password_fails(self, async_client: AsyncClient, clean_db):
         """Test registration with short password fails."""
         response = await async_client.post(
-            "/api/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": "shortpass@test.com",
                 "phone": "+27826666666",
@@ -203,7 +221,7 @@ class TestRegistration:
     async def test_register_merchant_role(self, async_client: AsyncClient, clean_db):
         """Test registration as merchant."""
         response = await async_client.post(
-            "/api/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": "merchant@test.com",
                 "phone": "+27825555555",
@@ -219,7 +237,7 @@ class TestRegistration:
     async def test_register_driver_role(self, async_client: AsyncClient, clean_db):
         """Test registration as driver."""
         response = await async_client.post(
-            "/api/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": "driver@test.com",
                 "phone": "+27824444444",
@@ -241,7 +259,7 @@ class TestLogin:
     async def test_login_success(self, async_client: AsyncClient, test_user):
         """Test successful login returns token."""
         response = await async_client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             data={
                 "username": test_user["email"],
                 "password": TEST_PASSWORD
@@ -257,7 +275,7 @@ class TestLogin:
     async def test_login_wrong_password_fails(self, async_client: AsyncClient, test_user):
         """Test login with wrong password fails."""
         response = await async_client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             data={
                 "username": test_user["email"],
                 "password": "wrongpassword"
@@ -271,7 +289,7 @@ class TestLogin:
     async def test_login_nonexistent_user_fails(self, async_client: AsyncClient, clean_db):
         """Test login with non-existent user fails."""
         response = await async_client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             data={
                 "username": "nonexistent@test.com",
                 "password": "anypassword"
@@ -300,7 +318,7 @@ class TestLogin:
         await users_col.insert_one(user_doc)
         
         response = await async_client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             data={
                 "username": "inactive@test.com",
                 "password": TEST_PASSWORD
@@ -319,7 +337,7 @@ class TestGetCurrentUser:
     async def test_get_me_success(self, async_client: AsyncClient, test_user, buyer_auth_headers):
         """Test getting current user info with valid token."""
         response = await async_client.get(
-            "/api/auth/me",
+            "/api/v1/auth/me",
             headers=buyer_auth_headers
         )
         
@@ -331,7 +349,7 @@ class TestGetCurrentUser:
     @pytest.mark.asyncio
     async def test_get_me_no_token_fails(self, async_client: AsyncClient):
         """Test getting current user without token fails."""
-        response = await async_client.get("/api/auth/me")
+        response = await async_client.get("/api/v1/auth/me")
         
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
     
@@ -339,7 +357,7 @@ class TestGetCurrentUser:
     async def test_get_me_invalid_token_fails(self, async_client: AsyncClient):
         """Test getting current user with invalid token fails."""
         response = await async_client.get(
-            "/api/auth/me",
+            "/api/v1/auth/me",
             headers={"Authorization": "Bearer invalid_token"}
         )
         
@@ -355,7 +373,7 @@ class TestGetCurrentUser:
         )
         
         response = await async_client.get(
-            "/api/auth/me",
+            "/api/v1/auth/me",
             headers={"Authorization": f"Bearer {expired_token}"}
         )
         
@@ -368,11 +386,32 @@ class TestTokenRefresh:
     """Tests for token refresh functionality."""
     
     @pytest.mark.asyncio
-    async def test_refresh_token_success(self, async_client: AsyncClient, test_user, buyer_auth_headers):
+    async def test_refresh_token_success(self, async_client: AsyncClient, test_user):
         """Test token refresh returns new valid token."""
-        # Note: This test assumes a /refresh endpoint exists
-        # If not implemented, skip or implement the endpoint
-        pass
+        # Create refresh token
+        refresh_token = create_refresh_token(
+            data={"sub": test_user["id"], "role": test_user["role"]}
+        )
+        
+        response = await async_client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token}
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "access_token" in data
+        assert data["token_type"] == "bearer"
+    
+    @pytest.mark.asyncio
+    async def test_refresh_token_invalid_fails(self, async_client: AsyncClient):
+        """Test refresh with invalid token fails."""
+        response = await async_client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": "invalid_token"}
+        )
+        
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
     
     @pytest.mark.asyncio
     async def test_refresh_preserves_user_data(self, async_client: AsyncClient, test_user):
@@ -409,33 +448,22 @@ class TestLogout:
     """Tests for logout and token blacklisting."""
     
     @pytest.mark.asyncio
-    async def test_logout_success(self, async_client: AsyncClient, buyer_auth_headers, mock_redis):
+    async def test_logout_success(self, async_client: AsyncClient, buyer_auth_headers):
         """Test successful logout."""
-        # Note: This assumes a /logout endpoint exists
-        # If using Redis for blacklist, verify token is blacklisted
-        pass
+        response = await async_client.post(
+            "/api/v1/auth/logout",
+            headers=buyer_auth_headers
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert "logged out" in response.json()["message"].lower()
     
     @pytest.mark.asyncio
-    async def test_blacklisted_token_rejected(self, async_client: AsyncClient, test_user, mock_redis):
-        """Test that blacklisted token is rejected."""
-        # Create token
-        token = create_access_token(
-            data={"sub": test_user["id"], "role": test_user["role"]},
-            expires_delta=timedelta(hours=1)
-        )
+    async def test_logout_unauthenticated_fails(self, async_client: AsyncClient):
+        """Test logout without auth fails."""
+        response = await async_client.post("/api/v1/auth/logout")
         
-        # Simulate blacklisting
-        mock_redis.exists.return_value = True
-        
-        # Attempt to use blacklisted token
-        response = await async_client.get(
-            "/api/auth/me",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        
-        # Should be rejected if blacklist is implemented
-        # This test may pass if blacklist isn't implemented yet
-        pass
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============ ROLE-BASED ACCESS TESTS ============
@@ -448,13 +476,12 @@ class TestRoleBasedAccess:
         self, async_client: AsyncClient, buyer_auth_headers
     ):
         """Test buyer cannot access admin-only endpoints."""
-        # Assuming there's an admin-only endpoint
         response = await async_client.get(
-            "/api/admin/users",
+            "/api/v1/referrals/admin/stats",
             headers=buyer_auth_headers
         )
         
-        assert response.status_code in [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND]
+        assert response.status_code == status.HTTP_403_FORBIDDEN
     
     @pytest.mark.asyncio
     async def test_merchant_cannot_access_driver_endpoints(
@@ -462,7 +489,7 @@ class TestRoleBasedAccess:
     ):
         """Test merchant cannot access driver-only endpoints."""
         response = await async_client.get(
-            "/api/riders/my-deliveries",
+            "/api/v1/riders/my-deliveries",
             headers=merchant_auth_headers
         )
         
@@ -474,7 +501,7 @@ class TestRoleBasedAccess:
     ):
         """Test admin can access protected endpoints."""
         response = await async_client.get(
-            "/api/auth/me",
+            "/api/v1/auth/me",
             headers=admin_auth_headers
         )
         
@@ -518,7 +545,7 @@ class TestAuthEdgeCases:
     async def test_login_empty_credentials(self, async_client: AsyncClient):
         """Test login with empty credentials."""
         response = await async_client.post(
-            "/api/auth/login",
+            "/api/v1/auth/login",
             data={"username": "", "password": ""}
         )
         
@@ -528,7 +555,7 @@ class TestAuthEdgeCases:
     async def test_register_missing_fields(self, async_client: AsyncClient, clean_db):
         """Test registration with missing required fields."""
         response = await async_client.post(
-            "/api/auth/register",
+            "/api/v1/auth/register",
             json={"email": "incomplete@test.com"}  # Missing required fields
         )
         
@@ -538,7 +565,7 @@ class TestAuthEdgeCases:
     async def test_token_malformed_header(self, async_client: AsyncClient):
         """Test with malformed authorization header."""
         response = await async_client.get(
-            "/api/auth/me",
+            "/api/v1/auth/me",
             headers={"Authorization": "InvalidFormat token"}
         )
         
@@ -553,7 +580,7 @@ class TestAuthEdgeCases:
         )
         
         response = await async_client.get(
-            "/api/auth/me",
+            "/api/v1/auth/me",
             headers={"Authorization": token}  # Missing "Bearer "
         )
         

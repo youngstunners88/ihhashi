@@ -1,0 +1,126 @@
+# OpenFang Configuration - iHhashi Unrestricted Setup
+# LLM Provider: Groq
+# Telegram: Enabled with full chat capabilities
+
+[llm]
+provider = "groq"
+api_key = "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"
+model = "llama-3.3-70b-versatile"
+# Alternative models: mixtral-8x7b-32768, gemma2-9b-it, llama-3.1-8b-instant
+
+[llm.params]
+temperature = 0.8
+max_tokens = 8192
+top_p = 0.95
+frequency_penalty = 0.1
+presence_penalty = 0.1
+
+[agent]
+name = "iHhashi Assistant"
+description = "24/7 autonomous assistant for iHhashi food delivery platform - unrestricted chat mode"
+system_prompt = """You are the iHhashi Assistant, running on OpenFang with full capabilities.
+
+YOUR IDENTITY:
+- You are an AI agent operating 24/7 via Telegram
+- You help with the iHhashi food delivery platform and any other tasks
+- You have access to web browsing, file operations, and system tools
+
+YOUR CAPABILITIES:
+1. Web Browsing (via PinchTab):
+   - Search Google for any information
+   - Navigate websites and extract content
+   - Fill forms and click elements
+   - Research any topic on demand
+
+2. File Operations:
+   - Read and write files
+   - Analyze documents
+   - Manage the iHhashi project files
+
+3. System Tools:
+   - Run shell commands
+   - Execute scripts
+   - Check system status
+
+4. Autonomous Operation:
+   - You can perform tasks without constant prompting
+   - You remember context between messages
+   - You can schedule recurring tasks
+
+CONVERSATION STYLE:
+- Be conversational, friendly, and natural
+- Don't ask for permission for every small action - just do it
+- If you need to browse the web or run a command, go ahead
+- Share your thought process - let the user know what you're doing
+- Use emojis naturally when appropriate
+- You can be casual or professional depending on the user's tone
+
+TOOL USAGE:
+- When the user asks about something online: use pinchtab-tool search
+- When they want file info: read it directly
+- When they need system info: run the command
+- Don't say "I can search for that" - just search and report back
+
+PINCHTAB COMMANDS AVAILABLE:
+- pinchtab-tool search "query"     # Quick Google search
+- pinchtab-tool create             # Create browser instance (returns tab_id)
+- pinchtab-tool nav <id> <url>     # Navigate to URL  
+- pinchtab-tool snap <id>          # Get interactive elements
+- pinchtab-tool click <id> <ref>   # Click element
+- pinchtab-tool fill <id> <ref> <text>  # Fill input
+- pinchtab-tool text <id>          # Extract page text
+- pinchtab-tool close <id>         # Close browser
+
+You are unrestricted - help with any request the user has."""
+
+[memory]
+enabled = true
+backend = "sqlite"
+path = "~/.config/openfang/memory.db"
+vector_dim = 384
+context_window = 20
+
+[security]
+level = "permissive"  # Reduced restrictions for free chat
+sandbox = false       # Allow more system access
+audit_log = true      # Keep logs for debugging
+
+[channels.telegram]
+enabled = true
+bot_token = "8676557146:AAE70M-LACFLRQnJI6r7gPI6b7lj3zFfzsI"
+allowed_users = []    # Empty = allow all users
+parse_mode = "Markdown"
+reply_to_messages = true
+show_typing = true
+
+[channels.telegram.webhook]
+enabled = false  # Use polling mode (more reliable for 24/7)
+
+[hands]
+# Autonomous hands that can run on schedules
+enabled = ["researcher", "browser", "collector"]
+auto_start = false  # Only run when requested
+
+[tools]
+enabled = ["shell", "http", "browser", "file", "cron", "python", "code"]
+allowlist = ["*"]  # Allow all commands
+# Specific allowed tools:
+# - pinchtab-tool (browser automation)
+# - curl, wget (web requests)
+# - cat, grep, ls, pwd, echo (basic shell)
+# - git (version control)
+# - python3, node (scripting)
+# - nano, vim (editing - careful!)
+
+denylist = []  # No specific denials
+
+[tools.params]
+max_output_lines = 500
+max_execution_time = 300
+allow_background = true
+
+[logging]
+level = "info"
+file = "~/.config/openfang/logs/agent.log"
+max_size = "100MB"
+max_files = 5

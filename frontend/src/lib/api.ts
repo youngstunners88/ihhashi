@@ -311,4 +311,89 @@ export const riderAPI = {
     api.patch(`/riders/orders/${orderId}/status`, { status }),
 };
 
+// ============================================================================
+// Customer Rewards API
+// ============================================================================
+export interface TierInfo {
+  name: 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
+  level: number;
+  min_referrals: number;
+  max_referrals: number;
+  discount_percent: number;
+  free_deliveries_per_month: number;
+  support_level: 'Standard' | 'Priority' | 'VIP' | 'Dedicated';
+  early_access: boolean;
+  icon: string;
+}
+
+export interface CoinTransaction {
+  id: string;
+  amount: number;
+  type: 'earned' | 'spent' | 'bonus';
+  description: string;
+  created_at: string;
+}
+
+export interface ReferralHistoryItem {
+  id: string;
+  referred_name: string;
+  referred_phone: string;
+  status: 'pending' | 'completed';
+  coins_earned: number;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface RewardsDashboardData {
+  current_tier: TierInfo;
+  coin_balance: number;
+  referral_code: string;
+  referral_link: string;
+  successful_referrals: number;
+  referrals_to_next_tier: number;
+  next_tier?: TierInfo;
+  tier_benefits: string[];
+}
+
+export const rewardsAPI = {
+  /**
+   * Get customer rewards dashboard data
+   */
+  dashboard: () => api.get<RewardsDashboardData>('/customer-rewards/dashboard'),
+
+  /**
+   * Get referral link
+   */
+  referralLink: () => api.get<{ referral_link: string; referral_code: string }>('/customer-rewards/referral-link'),
+
+  /**
+   * Get all tiers info
+   */
+  tiers: () => api.get<{ tiers: TierInfo[] }>('/customer-rewards/tiers'),
+
+  /**
+   * Redeem free delivery
+   */
+  redeemFreeDelivery: () =>
+    api.post<{ success: boolean; message: string; remaining_balance: number }>('/customer-rewards/redeem/free-delivery'),
+
+  /**
+   * Redeem discount (15 or 30 rand)
+   */
+  redeemDiscount: (amount: 15 | 30) =>
+    api.post<{ success: boolean; message: string; remaining_balance: number; discount_code: string }>(`/customer-rewards/redeem/discount/${amount}`),
+
+  /**
+   * Get coin transaction history
+   */
+  coinHistory: (params?: { limit?: number; offset?: number }) =>
+    api.get<{ transactions: CoinTransaction[]; total: number }>('/customer-rewards/coin-history', { params }),
+
+  /**
+   * Get referral history
+   */
+  referralHistory: (params?: { limit?: number; offset?: number }) =>
+    api.get<{ referrals: ReferralHistoryItem[]; total: number }>('/customer-rewards/referral-history', { params }),
+};
+
 export default api;
