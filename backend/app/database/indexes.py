@@ -159,6 +159,29 @@ async def create_indexes(db: AsyncIOMotorDatabase):
     except Exception as e:
         logger.error(f"Failed to create route_feedback indexes: {e}")
     
+    # Referral system indexes
+    try:
+        # Referral codes - unique code lookup
+        await db.referral_codes.create_index("code", unique=True)
+        await db.referral_codes.create_index("user_id")
+        await db.referral_codes.create_index([("user_id", 1), ("referral_type", 1)])
+        await db.referral_codes.create_index("status")
+        indexes_created.append("referral_codes")
+    except Exception as e:
+        logger.error(f"Failed to create referral_codes indexes: {e}")
+    
+    try:
+        # Referrals - track referral relationships
+        await db.referrals.create_index("referrer_id")
+        await db.referrals.create_index("referee_id")
+        await db.referrals.create_index("referral_code")
+        await db.referrals.create_index("status")
+        await db.referrals.create_index([("referrer_id", 1), ("status", 1)])
+        await db.referrals.create_index([("referral_code", 1), ("status", 1)])
+        indexes_created.append("referrals")
+    except Exception as e:
+        logger.error(f"Failed to create referrals indexes: {e}")
+    
     logger.info(f"Created indexes for collections: {', '.join(indexes_created)}")
     return indexes_created
 
