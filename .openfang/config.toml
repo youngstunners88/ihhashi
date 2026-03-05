@@ -29,5 +29,23 @@ level = "permissive"
 sandbox = false
 
 [tools]
-enabled = ["shell", "http", "file"]
+enabled = ["shell", "http", "file", "swarm"]
 allowlist = ["*"]
+
+# Swarm Orchestrator Bridge
+# Routes complex requests from Telegram users to the iHhashi Swarm
+[tools.swarm]
+name = "iHhashi Swarm"
+description = "Delegates complex tasks to the iHhashi AI development swarm"
+command = "bun /home/user/ihhashi/swarm/orchestrator/index.ts task"
+timeout = 120
+enabled = true
+
+# Swarm Integration
+[swarm]
+enabled = true
+orchestrator_path = "/home/user/ihhashi/swarm/orchestrator"
+config_path = "/home/user/ihhashi/swarm/swarm.config.yaml"
+context_path = "/home/user/ihhashi/swarm/context"
+budget_daily_zar = 500
+audit_log = "/home/user/ihhashi/swarm/state/audit.log"
