@@ -1,6 +1,5 @@
 #!/bin/bash
 # Complete iHhashi Deployment Script
-# Usage: ./DEPLOY_NOW.sh (after: railway login && netlify login)
 
 set -e
 
@@ -15,8 +14,8 @@ echo -e "${GREEN}   iHhashi Auto-Deployment${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
-# Check logins
-echo -e "${BLUE}Checking authentication...${NC}"
+# Check Railway login
+echo -e "${BLUE}Checking Railway authentication...${NC}"
 if ! railway whoami &>/dev/null; then
     echo -e "${RED}❌ Not logged into Railway${NC}"
     echo "   Run: railway login"
@@ -24,15 +23,6 @@ if ! railway whoami &>/dev/null; then
 fi
 echo -e "${GREEN}✓ Railway authenticated${NC}"
 
-if ! netlify whoami &>/dev/null; then
-    echo -e "${RED}❌ Not logged into Netlify${NC}"
-    echo "   Run: netlify login"
-    exit 1
-fi
-echo -e "${GREEN}✓ Netlify authenticated${NC}"
-echo ""
-
-read -p "Press Enter to start deployment..."
 echo ""
 
 # ===============================
@@ -61,12 +51,20 @@ fi
 
 echo -e "${GREEN}✓ Backend deployed: https://$RAILWAY_URL${NC}"
 echo ""
+read -p "Press Enter to continue to frontend deployment..."
+echo ""
 
 # ===============================
 # FRONTEND DEPLOYMENT  
 # ===============================
 echo -e "${BLUE}>>> Deploying Frontend to Netlify...${NC}"
 cd /home/teacherchris37/frontend
+
+# Temporarily rename netlify.toml to avoid parsing issues
+if [ -f netlify.toml ]; then
+    mv netlify.toml netlify.toml.bak
+    echo -e "${YELLOW}Temporarily moved netlify.toml${NC}"
+fi
 
 # Create env file with Railway URL
 echo -e "${YELLOW}Setting up frontend environment...${NC}"
@@ -78,9 +76,9 @@ EOF
 echo -e "${GREEN}✓ Created .env.local with API URL${NC}"
 
 # Install dependencies
-echo -e "${YELLOW}Installing dependencies (this may take a minute)...${NC}"
+echo -e "${YELLOW}Installing dependencies...${NC}"
 if [ ! -d node_modules ]; then
-    npm ci --legacy-peer-deps 2>&1 | grep -v "npm warn" || true
+    npm ci --legacy-peer-deps 2>&1 | tail -5
 else
     echo -e "${GREEN}✓ Dependencies already installed${NC}"
 fi
@@ -88,17 +86,20 @@ fi
 # Build
 echo -e "${YELLOW}Building frontend...${NC}"
 rm -rf dist
-npm run build 2>&1 | tail -20
+npm run build 2>&1 | tail -10
 
 if [ ! -d dist ]; then
     echo -e "${RED}❌ Build failed - dist folder not found${NC}"
+    # Restore netlify.toml
+    mv netlify.toml.bak netlify.toml 2>/dev/null || true
     exit 1
 fi
 
 echo -e "${GREEN}✓ Build successful${NC}"
 
 # Check if linked to site
-if [ ! -f .netlify/state.json ] 2>/dev/null; then
+NETLIFY_SITE=$(netlify status 2>&1 || echo "")
+if echo "$NETLIFY_SITE" | grep -q "Not linked"; then
     echo -e "${YELLOW}Linking to Netlify site...${NC}"
     netlify link
 fi
@@ -106,6 +107,9 @@ fi
 # Deploy
 echo -e "${YELLOW}Deploying to Netlify...${NC}"
 netlify deploy --prod --dir=dist
+
+# Restore netlify.toml
+mv netlify.toml.bak netlify.toml 2>/dev/null || true
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
@@ -115,16 +119,23 @@ echo ""
 echo -e "${BLUE}Your URLs:${NC}"
 echo -e "  🚀 Backend:  https://$RAILWAY_URL"
 echo ""
-echo -e "  🌐 Frontend: $(netlify status --json 2>/dev/null | grep -o '"url":"[^"]*"' | cut -d'"' -f4 || echo '[Check Netlify dashboard]')"
+
+# Try to get Netlify URL
+NETLIFY_URL=$(netlify status --json 2>/dev/null | grep -o '"url":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+if [ -n "$NETLIFY_URL" ]; then
+    echo -e "  🌐 Frontend: $NETLIFY_URL"
+else
+    echo -e "  🌐 Frontend: [Check Netlify dashboard]"
+fi
+
 echo ""
 echo -e "${YELLOW}⚠️  IMPORTANT NEXT STEP:${NC}"
 echo "   Update CORS_ORIGINS in Railway with your Netlify URL!"
 echo ""
 echo "   1. Go to: https://railway.app/dashboard"
-echo "   2. Select your project"
-echo "   3. Go to Variables tab"
-echo "   4. Add: CORS_ORIGINS=https://YOUR-NETLIFY-URL.netlify.app"
-echo "   5. Redeploy: cd backend && railway up"
+echo "   2. Select your project → Variables tab"
+echo "   3. Add: CORS_ORIGINS=$NETLIFY_URL"
+echo "   4. Redeploy: cd backend && railway up"
 echo ""
 echo -e "${BLUE}Test your deployment:${NC}"
 echo "   curl https://$RAILWAY_URL/health"
