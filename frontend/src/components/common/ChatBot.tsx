@@ -27,16 +27,7 @@ export default function ChatBot() {
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-4 w-14 h-14 bg-secondary rounded-full shadow-lg flex items-center justify-center z-50 hover:scale-105 transition-transform border-2 border-white"
       >
-        <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
-          {/* White horse head for Nduna */}
-          <path d="M25 80C20 75 15 65 20 55C25 45 35 40 40 35C45 30 50 20 55 15C60 10 65 7 70 7C75 7 80 13 80 20C80 27 75 33 70 37C65 41 60 45 57 50C55 55 57 60 60 65C63 70 67 75 67 80C67 87 63 93 57 93C51 93 47 87 43 80C39 73 33 80 25 80Z" fill="white"/>
-          {/* Black eye */}
-          <ellipse cx="73" cy="23" rx="4" ry="5" fill="#1A1A1A"/>
-          <circle cx="74" cy="22" r="1.5" fill="white"/>
-          {/* Smile with teeth */}
-          <path d="M77 33C77 33 73 37 69 37C65 37 63 33 65 30" stroke="#1A1A1A" strokeWidth="2" fill="none"/>
-          <path d="M67 33L69 35L71 33L73 35L75 33" stroke="#1A1A1A" strokeWidth="1" fill="none"/>
-        </svg>
+        <img src="/images/nduna.png" alt="Nduna" className="w-14 h-14 rounded-full shadow-lg" />
       </button>
 
       {/* Chat Modal */}

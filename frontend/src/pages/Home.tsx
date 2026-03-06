@@ -31,23 +31,8 @@ export default function Home() {
           {/* Top row: Logo + Location */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              {/* iHhashi Horse Logo - Black rearing horse with smile */}
-              <div className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center">
-                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  {/* Horse body - rearing up */}
-                  <path d="M20 75C15 70 10 60 15 50C20 40 30 35 35 30C40 25 45 15 50 10C55 5 60 2 65 2C70 2 75 8 75 15C75 22 70 28 65 32C60 36 55 40 52 45C50 50 52 55 55 60C58 65 62 70 62 75C62 82 58 88 52 88C46 88 42 82 38 75C34 68 28 75 20 75Z" fill="#1A1A1A"/>
-                  {/* White eye */}
-                  <ellipse cx="68" cy="18" rx="4" ry="5" fill="white"/>
-                  <circle cx="69" cy="17" r="1.5" fill="#1A1A1A"/>
-                  {/* Big smile with teeth */}
-                  <path d="M72 28C72 28 68 32 64 32C60 32 58 28 60 25" stroke="white" strokeWidth="2" fill="none"/>
-                  <path d="M62 28L64 30L66 28L68 30L70 28" stroke="white" strokeWidth="1" fill="none"/>
-                  {/* Mane */}
-                  <path d="M55 12C52 18 50 25 52 32C54 28 56 22 58 18" fill="#1A1A1A"/>
-                  {/* Tail */}
-                  <path d="M18 70C12 72 8 78 10 85C12 80 15 75 20 72" fill="#1A1A1A"/>
-                </svg>
-              </div>
+              {/* Horse logo */}
+              <img src="/images/ihhashi-logo.png" alt="iHhashi" className="w-10 h-10 object-contain" />
               <div>
                 <h1 className="font-bold text-xl text-secondary">iHhashi</h1>
                 <p className="text-xs text-secondary/70">Delivering to</p>

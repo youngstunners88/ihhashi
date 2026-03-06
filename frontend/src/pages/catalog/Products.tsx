@@ -96,9 +96,9 @@ export default function Products() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(product.id, qty - 1)}
-                          className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center"
+                          className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center"
                         >
-                          <Minus className="w-4 h-4 text-secondary" />
+                          <Minus className="w-4 h-4 text-white" />
                         </button>
                         <span className="font-medium text-secondary">{qty}</span>
                         <button
