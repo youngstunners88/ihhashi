@@ -93,3 +93,25 @@ Pods/
 
 # Local Netlify folder
 .netlify
+
+# Private AI Skills - NEVER COMMIT
+.kimi/
+.kimi/skills/
+
+# Environment files
+.env.local
+.env.*.local
+
+# Cache directories
+.npm/
+.cache/
+.config/
+.local/
+
+# OpenFang data
+.openfang/data/
+
+# Shell history
+.bash_history
+.zsh_history
+.git-credentials
