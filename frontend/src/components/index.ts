@@ -9,6 +9,13 @@ export { PaymentSelector } from './PaymentSelector';
 export { default as LanguageSelector } from './LanguageSelector';
 export { default as SplashScreen } from './SplashScreen';
 
+// Common Components
+export { default as ChatBot } from './common/ChatBot';
+export { default as VerificationBadge } from './common/VerificationBadge';
+
+// Delivery Components  
+export { default as DeliveryModeIcon } from './delivery/DeliveryModeIcon';
+
 // Rewards Components
 export {
   TierBadge,
