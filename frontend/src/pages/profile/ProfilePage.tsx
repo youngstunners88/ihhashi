@@ -33,73 +33,68 @@ export default function ProfilePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-primary pb-24">
-      {/* Yellow Header */}
+    <div className="min-h-screen bg-primary text-white pb-24">
       <header className="bg-primary px-4 py-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center border-2 border-white/40">
+            <img src="/images/ihhashi-logo.png" alt="iHhashi" className="w-10 h-10 object-contain" />
           </div>
           <div>
-            <h1 className="font-bold text-xl text-secondary">{user?.full_name || 'User'}</h1>
-            <p className="text-sm text-secondary/60">{user?.phone || '+27 xx xxx xxxx'}</p>
+            <h1 className="font-bold text-2xl text-secondary">{user?.full_name || 'User'}</h1>
+            <p className="text-sm text-secondary/70">{user?.phone || '+27 xx xxx xxxx'}</p>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="flex gap-3 mt-4">
-          <div className="bg-white rounded-xl px-4 py-3 flex-1">
-            <p className="text-2xl font-bold text-secondary">12</p>
-            <p className="text-xs text-secondary/60">Orders</p>
+        <div className="grid grid-cols-3 gap-3 mt-5 text-center">
+          <div className="bg-secondary/80 rounded-2xl py-3">
+            <p className="text-2xl font-bold">12</p>
+            <p className="text-xs text-white/70">Orders</p>
           </div>
-          <div className="bg-white rounded-xl px-4 py-3 flex-1">
-            <p className="text-2xl font-bold text-secondary">3</p>
-            <p className="text-xs text-secondary/60">Saved Addresses</p>
+          <div className="bg-secondary/80 rounded-2xl py-3">
+            <p className="text-2xl font-bold">3</p>
+            <p className="text-xs text-white/70">Saved Addresses</p>
           </div>
-          <div className="bg-white rounded-xl px-4 py-3 flex-1">
-            <p className="text-2xl font-bold text-secondary">4.8</p>
-            <p className="text-xs text-secondary/60">Rating</p>
+          <div className="bg-secondary/80 rounded-2xl py-3">
+            <p className="text-2xl font-bold">4.8</p>
+            <p className="text-xs text-white/70">Rating</p>
           </div>
         </div>
       </header>
 
-      {/* Menu Items */}
-      <div className="max-w-lg mx-auto px-4 py-4">
+      <div className="max-w-lg mx-auto px-4 py-4 space-y-3">
         {menuItems.map((item, idx) => {
           const Icon = item.icon
           return (
             <Link
               key={idx}
               to={item.to}
-              className="bg-white rounded-2xl p-4 mb-3 flex items-center justify-between shadow-md"
+              className="bg-secondary/80 rounded-2xl p-4 flex items-center justify-between shadow-lg border border-secondary/30"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary/30 rounded-full flex items-center justify-center">
                   <Icon className="w-5 h-5 text-secondary" />
                 </div>
-                <span className="font-medium text-secondary">{item.label}</span>
+                <span className="font-medium">{item.label}</span>
               </div>
-              <ChevronRight className="w-5 h-5 text-secondary/40" />
+              <ChevronRight className="w-5 h-5 text-white/60" />
             </Link>
           )
         })}
 
-        {/* Logout */}
         <button
           onClick={logout}
-          className="bg-white rounded-2xl p-4 w-full flex items-center justify-between shadow-md mt-4"
+          className="bg-secondary p-4 rounded-2xl w-full flex items-center justify-between border border-white/20 shadow-lg mt-2"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-              <LogOut className="w-5 h-5 text-red-500" />
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <LogOut className="w-5 h-5 text-white" />
             </div>
-            <span className="font-medium text-red-500">Logout</span>
+            <span className="font-medium">Logout</span>
           </div>
-          <ChevronRight className="w-5 h-5 text-secondary/40" />
+          <ChevronRight className="w-5 h-5 text-white/60" />
         </button>
       </div>
 
-      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-secondary/10 py-2 z-50">
         <div className="max-w-lg mx-auto flex justify-around">
           <Link to="/" className="flex flex-col items-center py-1 px-4 text-secondary/40">
@@ -121,7 +116,6 @@ export default function ProfilePage() {
         </div>
       </nav>
 
-      {/* Nduna ChatBot */}
       <ChatBot />
     </div>
   )

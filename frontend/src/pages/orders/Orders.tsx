@@ -61,21 +61,21 @@ export default function Orders() {
             <Link
               key={order.id}
               to={`/orders/${order.id}`}
-              className="bg-white rounded-2xl p-4 mb-3 shadow-md block"
+              className="bg-secondary/90 text-white rounded-2xl p-4 mb-3 shadow-lg border border-secondary/30 block"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-bold text-secondary">{order.merchant}</h3>
-                  <p className="text-sm text-secondary/60 mt-1">{order.items} • R{order.total}</p>
-                  <p className="text-xs text-secondary/40 mt-1 flex items-center gap-1">
+                  <h3 className="font-bold text-white">{order.merchant}</h3>
+                  <p className="text-sm text-white/70 mt-1">{order.items} • R{order.total}</p>
+                  <p className="text-xs text-white/60 mt-1 flex items-center gap-1">
                     <Clock className="w-3 h-3" /> {order.date}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${status.color}`}>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary text-secondary">
                     {status.label}
                   </span>
-                  <ChevronRight className="w-5 h-5 text-secondary/40" />
+                  <ChevronRight className="w-5 h-5 text-white/70" />
                 </div>
               </div>
             </Link>

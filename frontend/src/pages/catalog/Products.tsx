@@ -85,27 +85,27 @@ export default function Products() {
           {filteredProducts.map(product => {
             const qty = getItemQuantity(product.id)
             return (
-              <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-md">
+              <div key={product.id} className="bg-secondary/80 text-white rounded-2xl overflow-hidden shadow-md border border-secondary/20">
                 <img src={product.image} alt={product.name} className="w-full h-32 object-cover" />
                 <div className="p-3">
-                  <h4 className="font-bold text-sm text-secondary line-clamp-2">{product.name}</h4>
-                  <p className="text-xs text-secondary/60 mt-1">{product.stock} in stock</p>
+                  <h4 className="font-bold text-sm text-white line-clamp-2">{product.name}</h4>
+                  <p className="text-xs text-white/70 mt-1">{product.stock} in stock</p>
                   <div className="flex justify-between items-center mt-2">
-                    <span className="font-bold text-secondary">R{product.price}</span>
+                    <span className="font-bold text-primary">R{product.price}</span>
                     {qty > 0 ? (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(product.id, qty - 1)}
-                          className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center"
+                          className="w-7 h-7 rounded-full bg-primary/80 flex items-center justify-center shadow-inner"
                         >
-                          <Minus className="w-4 h-4 text-white" />
+                          <Minus className="w-4 h-4 text-secondary" />
                         </button>
-                        <span className="font-medium text-secondary">{qty}</span>
+                        <span className="font-medium">{qty}</span>
                         <button
                           onClick={() => updateQuantity(product.id, qty + 1)}
-                          className="w-7 h-7 rounded-full bg-secondary text-white flex items-center justify-center"
+                          className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center"
                         >
-                          <Plus className="w-4 h-4" />
+                          <Plus className="w-4 h-4 text-white" />
                         </button>
                       </div>
                     ) : (
@@ -117,7 +117,7 @@ export default function Products() {
                           quantity: 1,
                           image: product.image
                         })}
-                        className="bg-secondary text-white text-xs px-3 py-1.5 rounded-lg font-medium"
+                        className="bg-primary text-secondary text-xs px-3 py-1.5 rounded-full font-semibold shadow-lg"
                       >
                         Add
                       </button>
