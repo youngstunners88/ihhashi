@@ -2,10 +2,10 @@
  * RiderDashboard
  * Dashboard for delivery riders with real-time location tracking and order management
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRiderTracking } from '../hooks/useWebSocket';
 import { DriverLocationMap, NotificationToast, useNotifications, notificationHelpers } from '../components/realtime';
-import { LocationData, OrderStatus, NotificationData } from '../types/websocket';
+import { LocationData, OrderStatus, NotificationType } from '../types/websocket';
 import { riderAPI } from '../lib/api';
 import { useAuth } from '../App';
 import DeliveryModeIcon from '../components/delivery/DeliveryModeIcon';
@@ -13,7 +13,6 @@ import DeliveryModeIcon from '../components/delivery/DeliveryModeIcon';
 // Icons
 const LocationIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const OrderIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>;
-const EarningsIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const CheckIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>;
 const PackageIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>;
 const PhoneIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
@@ -49,7 +48,6 @@ export function RiderDashboard() {
   const {
     isConnected,
     isConnecting,
-    error,
     updateLocation: wsUpdateLocation,
     updateStatus: wsUpdateStatus,
     completeDelivery: wsCompleteDelivery,
@@ -59,10 +57,9 @@ export function RiderDashboard() {
       notifs.addNotification(notificationHelpers.driverAssigned(orderId));
       fetchActiveOrder();
     },
-    onError: (err) => {
-      console.error('Rider tracking error:', err);
+    onError: () => {
       notifs.addNotification({
-        type: 'error',
+        type: NotificationType.ERROR,
         title: 'Connection Error',
         message: 'Failed to connect to server. Please check your connection.',
         autoDismiss: true,
@@ -81,8 +78,8 @@ export function RiderDashboard() {
         setActiveOrder(null);
         if (status === 'busy') setStatus('available');
       }
-    } catch (err) {
-      console.error('Failed to fetch active order:', err);
+    } catch {
+      // Silently handle error
     }
   }, [status]);
 
@@ -104,12 +101,12 @@ export function RiderDashboard() {
     if (currentLocation && isConnected) {
       wsUpdateLocation(currentLocation);
     }
-  }, [currentLocation, isConnected]);
+  }, [currentLocation, isConnected, wsUpdateLocation]);
 
   const startLocationTracking = () => {
     if (!navigator.geolocation) {
       notifs.addNotification({
-        type: 'error',
+        type: NotificationType.ERROR,
         title: 'Location Error',
         message: 'Geolocation is not supported by your browser.',
         autoDismiss: true,
@@ -128,10 +125,9 @@ export function RiderDashboard() {
           last_updated: new Date().toISOString(),
         });
       },
-      (err) => {
-        console.error('Geolocation error:', err);
+      () => {
         notifs.addNotification({
-          type: 'error',
+          type: NotificationType.ERROR,
           title: 'Location Error',
           message: 'Unable to get your location. Please enable location services.',
           autoDismiss: true,
@@ -164,9 +160,9 @@ export function RiderDashboard() {
       notifs.addNotification(notificationHelpers.deliveryCompleted(activeOrder.id));
       setActiveOrder(null);
       setStatus('available');
-    } catch (err) {
+    } catch {
       notifs.addNotification({
-        type: 'error',
+        type: NotificationType.ERROR,
         title: 'Error',
         message: 'Failed to complete delivery. Please try again.',
         autoDismiss: true,

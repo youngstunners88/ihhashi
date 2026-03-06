@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { RefundStatusCard } from '../../components/order/RefundStatusCard'
-import { RefundStatus } from '../../types/order'
+
+type RefundStatus = 'pending' | 'approved' | 'rejected' | 'completed'
 
 interface Refund {
   id: string
@@ -9,12 +9,26 @@ interface Refund {
   refund_reason: string
   status: RefundStatus
   created_at: string
-  deadline: string
+  deadline?: string
   refund_items: Array<{
     product_name: string
     quantity: number
     total_price: number
   }>
+}
+
+const statusColors: Record<RefundStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800',
+  completed: 'bg-green-100 text-green-800',
+}
+
+const statusLabels: Record<RefundStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  completed: 'Completed',
 }
 
 export function RefundsPage() {
@@ -29,20 +43,18 @@ export function RefundsPage() {
   const fetchRefunds = async () => {
     setLoading(true)
     try {
-      const url = filter === 'all' 
-        ? '/api/v1/refunds/my-requests'
-        : `/api/v1/refunds/my-requests?status=${filter}`
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setRefunds(data)
-      }
+      // Mock data for now
+      setRefunds([
+        {
+          id: 'ref-001',
+          order_id: 'ord-001',
+          total_refund_amount: 85.00,
+          refund_reason: 'Item arrived damaged',
+          status: 'pending',
+          created_at: '2026-03-06T10:00:00Z',
+          refund_items: [{ product_name: 'Classic Kota', quantity: 1, total_price: 45 }]
+        }
+      ])
     } catch (error) {
       console.error('Failed to fetch refunds:', error)
     } finally {
@@ -52,63 +64,54 @@ export function RefundsPage() {
 
   const statusFilters: { value: RefundStatus | 'all'; label: string }[] = [
     { value: 'all', label: 'All' },
-    { value: 'requested', label: 'Requested' },
-    { value: 'ai_review', label: 'In Review' },
+    { value: 'pending', label: 'Pending' },
     { value: 'approved', label: 'Approved' },
-    { value: 'completed', label: 'Completed' },
     { value: 'rejected', label: 'Rejected' },
+    { value: 'completed', label: 'Completed' },
   ]
 
   const summary = {
     total: refunds.length,
-    pending: refunds.filter(r => ['requested', 'ai_review', 'pending_merchant', 'pending_evidence'].includes(r.status)).length,
+    pending: refunds.filter(r => r.status === 'pending').length,
     approved: refunds.filter(r => r.status === 'approved' || r.status === 'completed').length,
     rejected: refunds.filter(r => r.status === 'rejected').length,
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Refunds</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Track and manage your refund requests
-          </p>
-        </div>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-primary pb-20">
+      {/* Yellow Header */}
+      <header className="bg-primary px-4 py-6">
+        <h1 className="font-bold text-2xl text-secondary">My Refunds</h1>
+        <p className="text-sm text-secondary/60 mt-1">Track your refund requests</p>
+        
         {/* Summary Cards */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          <div className="bg-white rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-gray-900">{summary.total}</p>
-            <p className="text-xs text-gray-500">Total</p>
+        <div className="flex gap-3 mt-4">
+          <div className="bg-white rounded-xl px-4 py-3 flex-1">
+            <p className="text-xl font-bold text-secondary">{summary.total}</p>
+            <p className="text-xs text-secondary/60">Total</p>
           </div>
-          <div className="bg-white rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-yellow-600">{summary.pending}</p>
-            <p className="text-xs text-gray-500">Pending</p>
+          <div className="bg-white rounded-xl px-4 py-3 flex-1">
+            <p className="text-xl font-bold text-yellow-600">{summary.pending}</p>
+            <p className="text-xs text-secondary/60">Pending</p>
           </div>
-          <div className="bg-white rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-green-600">{summary.approved}</p>
-            <p className="text-xs text-gray-500">Approved</p>
-          </div>
-          <div className="bg-white rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-red-600">{summary.rejected}</p>
-            <p className="text-xs text-gray-500">Rejected</p>
+          <div className="bg-white rounded-xl px-4 py-3 flex-1">
+            <p className="text-xl font-bold text-green-600">{summary.approved}</p>
+            <p className="text-xs text-secondary/60">Approved</p>
           </div>
         </div>
+      </header>
 
+      <div className="max-w-lg mx-auto px-4 py-4">
         {/* Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-4">
+        <div className="flex gap-2 overflow-x-auto pb-4">
           {statusFilters.map((f) => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 filter === f.value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                  ? 'bg-secondary text-primary'
+                  : 'bg-white text-secondary border border-secondary/10'
               }`}
             >
               {f.label}
@@ -119,40 +122,44 @@ export function RefundsPage() {
         {/* Refunds List */}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary" />
           </div>
         ) : refunds.length === 0 ? (
-          <div className="bg-white rounded-lg p-12 text-center">
-            <svg className="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-900 mt-4">No Refunds Found</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              {filter === 'all' 
-                ? "You haven't requested any refunds yet."
-                : `No ${filter.replace('_', ' ')} refunds.`}
-            </p>
+          <div className="bg-white rounded-2xl p-12 text-center shadow-md">
+            <p className="text-secondary/60">No refunds found</p>
           </div>
         ) : (
           <div className="space-y-4">
             {refunds.map((refund) => (
-              <RefundStatusCard
-                key={refund.id}
-                refund={refund as any}
-              />
+              <div key={refund.id} className="bg-white rounded-2xl p-4 shadow-md">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <p className="text-sm text-secondary/60">Refund #{refund.id.slice(-6)}</p>
+                    <p className="text-lg font-bold text-secondary">
+                      R{refund.total_refund_amount.toFixed(2)}
+                    </p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[refund.status]}`}>
+                    {statusLabels[refund.status]}
+                  </span>
+                </div>
+                
+                <p className="text-sm text-secondary/80 mb-2">{refund.refund_reason}</p>
+                
+                {refund.refund_items.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    {refund.refund_items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <span className="text-secondary">{item.quantity}x {item.product_name}</span>
+                        <span className="font-medium text-secondary">R{item.total_price.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
-
-        {/* CPA Notice */}
-        <div className="mt-8 bg-gray-100 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Your Rights Under South African Law</h4>
-          <ul className="text-xs text-gray-600 space-y-1">
-            <li>• Consumer Protection Act (CPA) guarantees refunds for defective goods within 6 months</li>
-            <li>• Refunds must be processed within 10 business days</li>
-            <li>• You may escalate unresolved disputes to the Consumer Goods and Services Ombud (CGSO)</li>
-          </ul>
-        </div>
       </div>
     </div>
   )

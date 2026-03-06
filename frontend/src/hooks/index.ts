@@ -5,13 +5,14 @@
 
 // Existing hooks
 export { useCart } from './useCart';
-export { useLoadShedding } from './useLoadShedding';
-export { useDataSaver } from './useDataSaver';
-export { usePostHog } from './usePostHog';
+export { useDebounce } from './useDebounce';
+export { useFavorites } from './useFavorites';
+export { useMerchant } from './useMerchant';
+export { useOrders } from './useOrders';
+export { useWebSocket } from './useWebSocket';
 
 // WebSocket hooks
 export {
-  useWebSocket,
   useOrderTracking,
   useRiderTracking,
   useMerchantNotifications,

@@ -57,10 +57,10 @@ export function HomePage() {
     // Get user location on mount
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        (_position) => {
           // Reverse geocode to get address
         },
-        (error) => {
+        (_error) => {
           // Location permission denied or unavailable
         }
       )

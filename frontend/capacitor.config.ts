@@ -4,10 +4,18 @@ const config: CapacitorConfig = {
   appId: 'com.ihhashi.delivery',
   appName: 'iHhashi',
   webDir: 'dist',
-  backgroundColor: '#FF6B35',
+  server: {
+    // Enable live reload for development
+    // Run 'npm run dev -- --host' then update this URL to your computer's IP
+    // url: 'http://YOUR_IP:5173',
+    cleartext: true,
+  },
   android: {
-    loaderColor: '#FF6B35'
-  }
+    buildOptions: {
+      keystorePath: 'android/ihhashi-new.keystore',
+      keystoreAlias: 'ihhashi',
+    },
+  },
 };
 
 export default config;

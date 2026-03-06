@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, MessageCircle, Send } from 'lucide-react'
+import { X, Send } from 'lucide-react'
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false)
@@ -11,111 +11,85 @@ export default function ChatBot() {
   const handleSend = () => {
     if (!input.trim()) return
     setMessages([...messages, { text: input, isUser: true }])
-    setInput('')
-    // Simulate Nduna response
     setTimeout(() => {
       setMessages(prev => [...prev, { 
-        text: "Thanks for your message! I'm connecting you with a support agent...", 
+        text: "Thanks for your message! A support agent will assist you shortly.", 
         isUser: false 
       }])
     }, 1000)
+    setInput('')
   }
 
   return (
     <>
-      {/* Floating Nduna Button */}
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-20 right-4 z-50 w-14 h-14 bg-secondary rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform border-2 border-primary"
-          aria-label="Chat with Nduna"
-        >
-          {/* Nduna Horse Head Icon */}
-          <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Horse head silhouette */}
-            <path 
-              d="M30 85C30 85 25 70 30 60C35 50 40 45 45 40C50 35 55 30 60 25C65 20 70 15 75 15C80 15 85 20 85 25C85 30 80 35 75 40C70 45 65 50 63 55C61 60 63 65 65 70C67 75 70 80 70 85" 
-              fill="#FFD700"
-            />
-            {/* Eye */}
-            <circle cx="75" cy="28" r="4" fill="#1A1A1A"/>
-            {/* Smile */}
-            <path 
-              d="M80 35C80 35 77 38 75 38C73 38 73 35 75 33" 
-              stroke="#1A1A1A" 
-              strokeWidth="2" 
-              fill="none"
-            />
-            {/* Mane */}
-            <path 
-              d="M55 20C55 20 50 15 52 10C54 5 58 8 60 12" 
-              fill="#FFD700"
-            />
-          </svg>
-        </button>
-      )}
+      {/* Nduna Button - Black circle with white horse icon */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-24 right-4 w-14 h-14 bg-secondary rounded-full shadow-lg flex items-center justify-center z-50 hover:scale-105 transition-transform border-2 border-white"
+      >
+        <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+          {/* White horse head for Nduna */}
+          <path d="M25 80C20 75 15 65 20 55C25 45 35 40 40 35C45 30 50 20 55 15C60 10 65 7 70 7C75 7 80 13 80 20C80 27 75 33 70 37C65 41 60 45 57 50C55 55 57 60 60 65C63 70 67 75 67 80C67 87 63 93 57 93C51 93 47 87 43 80C39 73 33 80 25 80Z" fill="white"/>
+          {/* Black eye */}
+          <ellipse cx="73" cy="23" rx="4" ry="5" fill="#1A1A1A"/>
+          <circle cx="74" cy="22" r="1.5" fill="white"/>
+          {/* Smile with teeth */}
+          <path d="M77 33C77 33 73 37 69 37C65 37 63 33 65 30" stroke="#1A1A1A" strokeWidth="2" fill="none"/>
+          <path d="M67 33L69 35L71 33L73 35L75 33" stroke="#1A1A1A" strokeWidth="1" fill="none"/>
+        </svg>
+      </button>
 
-      {/* Chat Window */}
+      {/* Chat Modal */}
       {isOpen && (
-        <div className="fixed bottom-20 right-4 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-secondary/10 overflow-hidden">
-          {/* Header */}
-          <div className="bg-secondary p-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
-                  <path d="M30 85C30 85 25 70 30 60C35 50 40 45 45 40C50 35 55 30 60 25C65 20 70 15 75 15C80 15 85 20 85 25C85 30 80 35 75 40C70 45 65 50 63 55C61 60 63 65 65 70C67 75 70 80 70 85" fill="#1A1A1A"/>
-                  <circle cx="75" cy="28" r="3" fill="white"/>
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-primary font-bold text-sm">Nduna</h3>
-                <p className="text-primary/60 text-xs">iHhashi Assistant</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setIsOpen(false)}
-              className="text-primary/60 hover:text-primary"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50">
-            {messages.map((msg, idx) => (
-              <div 
-                key={idx} 
-                className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}
-              >
-                <div 
-                  className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
-                    msg.isUser 
-                      ? 'bg-secondary text-white rounded-br-md' 
-                      : 'bg-white border border-secondary/10 text-secondary rounded-bl-md'
-                  }`}
-                >
-                  {msg.text}
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="bg-secondary p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                    <path d="M25 80C20 75 15 65 20 55C25 45 35 40 40 35C45 30 50 20 55 15C60 10 65 7 70 7C75 7 80 13 80 20C80 27 75 33 70 37C65 41 60 45 57 50C55 55 57 60 60 65C63 70 67 75 67 80C67 87 63 93 57 93C51 93 47 87 43 80C39 73 33 80 25 80Z" fill="#1A1A1A"/>
+                    <ellipse cx="73" cy="23" rx="3" ry="4" fill="white"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">Nduna</h3>
+                  <p className="text-xs text-white/70">iHhashi Assistant</p>
                 </div>
               </div>
-            ))}
-          </div>
+              <button onClick={() => setIsOpen(false)} className="text-white hover:bg-white/20 rounded-full p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-          {/* Input */}
-          <div className="p-3 border-t border-secondary/10 bg-white">
-            <div className="flex gap-2">
+            {/* Messages */}
+            <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50">
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] px-4 py-2 rounded-2xl ${
+                    msg.isUser ? 'bg-secondary text-white rounded-br-none' : 'bg-white text-gray-800 rounded-bl-none shadow-sm'
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Input */}
+            <div className="p-3 bg-white border-t flex gap-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Type a message..."
-                className="flex-1 px-3 py-2 bg-gray-100 rounded-xl text-sm text-secondary placeholder-secondary/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-secondary/20"
               />
               <button 
                 onClick={handleSend}
-                className="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center hover:bg-secondary/80 transition-colors"
+                className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center hover:bg-secondary/80 transition-colors"
               >
-                <Send className="w-4 h-4 text-primary" />
+                <Send className="w-4 h-4 text-white" />
               </button>
             </div>
           </div>

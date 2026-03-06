@@ -1,18 +1,19 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Search, ShoppingCart, Plus, Minus } from 'lucide-react'
+import { ArrowLeft, Search, ShoppingCart, Plus, Minus, Home, User, ShoppingBag } from 'lucide-react'
 import { useCart } from '../../hooks/useCart'
+import ChatBot from '../../components/common/ChatBot'
 
 const mockProducts = [
-  { id: '1', name: 'Stainless Steel Spork', price: 45, category: 'utensils', stock: 50, image: 'https://placehold.co/200x200/FF6B35/white?text=Spork' },
-  { id: '2', name: 'Bic Ballpoint Pens (10pk)', price: 35, category: 'stationery', stock: 100, image: 'https://placehold.co/200x200/3B82F6/white?text=Pens' },
-  { id: '3', name: 'Kitchen Towels (3pk)', price: 55, category: 'household', stock: 30, image: 'https://placehold.co/200x200/10B981/white?text=Towels' },
-  { id: '4', name: 'USB Charging Cable', price: 89, category: 'electronics', stock: 25, image: 'https://placehold.co/200x200/8B5CF6/white?text=Cable' },
-  { id: '5', name: 'Notebook A5 (100 pages)', price: 25, category: 'stationery', stock: 75, image: 'https://placehold.co/200x200/3B82F6/white?text=Notebook' },
-  { id: '6', name: 'Wooden Spatula', price: 35, category: 'utensils', stock: 40, image: 'https://placehold.co/200x200/FF6B35/white?text=Spatula' },
+  { id: '1', name: 'Classic Kota', price: 45, category: 'fastfood', stock: 50, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&h=200&fit=crop' },
+  { id: '2', name: 'Fresh Apples 1kg', price: 35, category: 'fresh', stock: 100, image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=300&h=200&fit=crop' },
+  { id: '3', name: 'Bunny Chow', price: 65, category: 'fastfood', stock: 30, image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=300&h=200&fit=crop' },
+  { id: '4', name: 'Spinach Bunch', price: 25, category: 'fresh', stock: 25, image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=300&h=200&fit=crop' },
+  { id: '5', name: 'Gatsby Sandwich', price: 75, category: 'fastfood', stock: 75, image: 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=300&h=200&fit=crop' },
+  { id: '6', name: 'Carrots 1kg', price: 20, category: 'fresh', stock: 40, image: 'https://images.unsplash.com/photo-1445282768818-728615cc910a?w=300&h=200&fit=crop' },
 ]
 
-const categories = ['All', 'Utensils', 'Stationery', 'Household', 'Electronics']
+const categories = ['All', 'Fast Food', 'Fresh', 'Groceries']
 
 export default function Products() {
   const { category } = useParams()
@@ -32,27 +33,27 @@ export default function Products() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+    <div className="min-h-screen bg-primary pb-24">
+      {/* Yellow Header */}
+      <header className="bg-primary sticky top-0 z-10">
         <div className="px-4 py-3 flex items-center gap-3">
-          <Link to="/" className="p-2 -ml-2">
+          <Link to="/" className="p-2 -ml-2 text-secondary">
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <div className="flex-1 relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-secondary/40" />
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search food, groceries..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="input pl-10"
+              className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white text-secondary placeholder-secondary/40 focus:outline-none focus:ring-2 focus:ring-secondary/20"
             />
           </div>
-          <Link to="/cart" className="relative">
-            <ShoppingCart className="w-6 h-6 text-gray-600" />
+          <Link to="/cart" className="relative text-secondary">
+            <ShoppingCart className="w-6 h-6" />
             {items.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#FF6B35] text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-secondary text-primary text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
                 {items.length}
               </span>
             )}
@@ -60,15 +61,15 @@ export default function Products() {
         </div>
 
         {/* Category Tabs */}
-        <div className="px-4 py-2 flex gap-2 overflow-x-auto">
+        <div className="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide">
           {categories.map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap ${
+              className={`px-4 py-2 rounded-full text-sm whitespace-nowrap font-medium transition-all ${
                 activeCategory === cat
-                  ? 'bg-[#FF6B35] text-white'
-                  : 'bg-gray-100 text-gray-600'
+                  ? 'bg-secondary text-primary'
+                  : 'bg-white/50 text-secondary border border-secondary/10'
               }`}
             >
               {cat}
@@ -79,46 +80,49 @@ export default function Products() {
 
       {/* Product Grid */}
       <div className="max-w-lg mx-auto px-4 py-4">
+        <h2 className="font-bold text-xl text-secondary mb-4">Products</h2>
         <div className="grid grid-cols-2 gap-3">
           {filteredProducts.map(product => {
             const qty = getItemQuantity(product.id)
             return (
-              <div key={product.id} className="card">
-                <img src={product.image} alt={product.name} className="w-full aspect-square object-cover rounded-lg mb-2" />
-                <h4 className="font-medium text-sm line-clamp-2">{product.name}</h4>
-                <p className="text-xs text-gray-400 mt-1">{product.stock} in stock</p>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="font-bold text-[#FF6B35]">R{product.price}</span>
-                  {qty > 0 ? (
-                    <div className="flex items-center gap-2">
+              <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-md">
+                <img src={product.image} alt={product.name} className="w-full h-32 object-cover" />
+                <div className="p-3">
+                  <h4 className="font-bold text-sm text-secondary line-clamp-2">{product.name}</h4>
+                  <p className="text-xs text-secondary/60 mt-1">{product.stock} in stock</p>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="font-bold text-secondary">R{product.price}</span>
+                    {qty > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(product.id, qty - 1)}
+                          className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center"
+                        >
+                          <Minus className="w-4 h-4 text-secondary" />
+                        </button>
+                        <span className="font-medium text-secondary">{qty}</span>
+                        <button
+                          onClick={() => updateQuantity(product.id, qty + 1)}
+                          className="w-7 h-7 rounded-full bg-secondary text-white flex items-center justify-center"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
                       <button
-                        onClick={() => updateQuantity(product.id, qty - 1)}
-                        className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center"
+                        onClick={() => addItem({
+                          productId: product.id,
+                          name: product.name,
+                          price: product.price,
+                          quantity: 1,
+                          image: product.image
+                        })}
+                        className="bg-secondary text-white text-xs px-3 py-1.5 rounded-lg font-medium"
                       >
-                        <Minus className="w-4 h-4" />
+                        Add
                       </button>
-                      <span className="font-medium">{qty}</span>
-                      <button
-                        onClick={() => updateQuantity(product.id, qty + 1)}
-                        className="w-7 h-7 rounded-full bg-[#FF6B35] text-white flex items-center justify-center"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => addItem({
-                        productId: product.id,
-                        name: product.name,
-                        price: product.price,
-                        quantity: 1,
-                        image: product.image
-                      })}
-                      className="bg-[#FF6B35] text-white text-xs px-3 py-1.5 rounded-lg"
-                    >
-                      Add
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             )
@@ -126,18 +130,30 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Floating Cart Button */}
-      {items.length > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 max-w-lg mx-auto">
-          <Link
-            to="/cart"
-            className="bg-[#FF6B35] text-white py-4 px-6 rounded-xl flex items-center justify-between shadow-lg"
-          >
-            <span>{items.length} items</span>
-            <span className="font-bold">R{useCart.getState().getTotal()}</span>
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-secondary/10 py-2 z-50">
+        <div className="max-w-lg mx-auto flex justify-around">
+          <Link to="/" className="flex flex-col items-center py-1 px-4 text-secondary/40">
+            <Home className="w-6 h-6" />
+            <span className="text-xs mt-1">Home</span>
+          </Link>
+          <Link to="/products" className="flex flex-col items-center py-1 px-4">
+            <Search className="w-6 h-6 text-secondary fill-secondary" />
+            <span className="text-xs mt-1 font-bold text-secondary">Search</span>
+          </Link>
+          <Link to="/orders" className="flex flex-col items-center py-1 px-4 text-secondary/40">
+            <ShoppingBag className="w-6 h-6" />
+            <span className="text-xs mt-1">Orders</span>
+          </Link>
+          <Link to="/profile" className="flex flex-col items-center py-1 px-4 text-secondary/40">
+            <User className="w-6 h-6" />
+            <span className="text-xs mt-1">Profile</span>
           </Link>
         </div>
-      )}
+      </nav>
+
+      {/* Nduna ChatBot */}
+      <ChatBot />
     </div>
   )
 }

@@ -21,7 +21,7 @@ interface RefundRequestModalProps {
   }) => Promise<void>
 }
 
-export function RefundRequestModal({ orderId, items, onClose, onSubmit }: RefundRequestModalProps) {
+export function RefundRequestModal({ orderId: _orderId, items, onClose, onSubmit }: RefundRequestModalProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [reason, setReason] = useState<RefundReason | ''>('')
   const [explanation, setExplanation] = useState('')
@@ -63,12 +63,12 @@ export function RefundRequestModal({ orderId, items, onClose, onSubmit }: Refund
       const refundItems: RefundItem[] = items
         .filter(item => selectedItems.has(item.product_id))
         .map(item => ({
-          order_item_id: item.product_id,
-          product_name: item.product_name,
+          product_id: item.product_id,
+          reason: reason as RefundReason,
           quantity: item.quantity,
+          product_name: item.product_name,
           unit_price: item.unit_price,
           total_price: item.total_price,
-          refund_reason: reason as RefundReason,
         }))
 
       await onSubmit({

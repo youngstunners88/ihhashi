@@ -31,12 +31,21 @@ export default function Home() {
           {/* Top row: Logo + Location */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              {/* Horse logo in circle */}
-              <div className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center border-2 border-secondary">
-                <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M25 75C25 75 20 60 25 50C30 40 35 35 40 30C45 25 50 20 55 15C60 10 65 5 70 5C75 5 80 10 80 15C80 20 75 25 70 30C65 35 60 40 58 45C56 50 58 55 60 60C62 65 65 70 65 75C65 80 60 85 55 85C50 85 45 80 40 75C35 70 30 75 25 75Z" fill="#1A1A1A"/>
-                  <circle cx="70" cy="18" r="3" fill="white"/>
-                  <path d="M75 22C75 22 72 25 70 25C68 25 68 22 70 20" stroke="white" strokeWidth="2" fill="none"/>
+              {/* iHhashi Horse Logo - Black rearing horse with smile */}
+              <div className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                  {/* Horse body - rearing up */}
+                  <path d="M20 75C15 70 10 60 15 50C20 40 30 35 35 30C40 25 45 15 50 10C55 5 60 2 65 2C70 2 75 8 75 15C75 22 70 28 65 32C60 36 55 40 52 45C50 50 52 55 55 60C58 65 62 70 62 75C62 82 58 88 52 88C46 88 42 82 38 75C34 68 28 75 20 75Z" fill="#1A1A1A"/>
+                  {/* White eye */}
+                  <ellipse cx="68" cy="18" rx="4" ry="5" fill="white"/>
+                  <circle cx="69" cy="17" r="1.5" fill="#1A1A1A"/>
+                  {/* Big smile with teeth */}
+                  <path d="M72 28C72 28 68 32 64 32C60 32 58 28 60 25" stroke="white" strokeWidth="2" fill="none"/>
+                  <path d="M62 28L64 30L66 28L68 30L70 28" stroke="white" strokeWidth="1" fill="none"/>
+                  {/* Mane */}
+                  <path d="M55 12C52 18 50 25 52 32C54 28 56 22 58 18" fill="#1A1A1A"/>
+                  {/* Tail */}
+                  <path d="M18 70C12 72 8 78 10 85C12 80 15 75 20 72" fill="#1A1A1A"/>
                 </svg>
               </div>
               <div>

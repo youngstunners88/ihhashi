@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { OrderStatus } from '../../types/order'
+import { OrderStatus } from '../../types/websocket'
 
 interface OrderItem {
   product_id: string
