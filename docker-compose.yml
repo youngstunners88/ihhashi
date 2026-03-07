@@ -137,10 +137,29 @@ services:
     profiles:
       - monitoring
 
+  # PostgreSQL for Paperclip Swarm Governance
+  paperclip-db:
+    image: postgres:15-alpine
+    container_name: ihhashi-paperclip-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=paperclip
+      - POSTGRES_PASSWORD=${PAPERCLIP_DB_PASSWORD:-paperclip_dev}
+      - POSTGRES_DB=paperclip
+    volumes:
+      - paperclip_db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - ihhashi-network
+    profiles:
+      - swarm
+
 volumes:
   mongodb_data:
   redis_data:
   glitchtip_db_data:
+  paperclip_db_data:
 
 networks:
   ihhashi-network:

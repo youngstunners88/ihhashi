@@ -1,0 +1,719 @@
+{
+  "generatedAt": "2026-03-05T17:42:37.265Z",
+  "routes": [
+    {
+      "file": "backend/app/routes/riders.py",
+      "prefix": "/riders",
+      "endpoints": [
+        "@router.get(\"/profile\")",
+        "@router.post(\"/profile\")",
+        "@router.put(\"/profile\")",
+        "@router.put(\"/status\")",
+        "@router.put(\"/location\")",
+        "@router.get(\"/orders/available\")",
+        "@router.post(\"/orders/{order_id}/accept\")",
+        "@router.get(\"/earnings\")",
+        "@router.get(\"/history\")"
+      ],
+      "lineCount": 474
+    },
+    {
+      "file": "backend/app/routes/trips.py",
+      "prefix": "/trips",
+      "endpoints": [
+        "@router.post(\"/request\")",
+        "@router.get(\"/active\")",
+        "@router.post(\"/{delivery_id}/accept\")",
+        "@router.post(\"/{delivery_id}/at-merchant\")",
+        "@router.post(\"/{delivery_id}/picked-up\")",
+        "@router.post(\"/{delivery_id}/in-transit\")",
+        "@router.post(\"/{delivery_id}/arrived\")",
+        "@router.post(\"/{delivery_id}/complete\")",
+        "@router.post(\"/{delivery_id}/cancel\")",
+        "@router.post(\"/{delivery_id}/location\")",
+        "@router.get(\"/{delivery_id}\")",
+        "@router.post(\"/{delivery_id}/rate\")"
+      ],
+      "lineCount": 445
+    },
+    {
+      "file": "backend/app/routes/websocket.py",
+      "prefix": "/websocket",
+      "endpoints": [
+        "@router.websocket(\"/ws\")",
+        "@router.websocket(\"/track/{order_id}\")",
+        "@router.websocket(\"/rider/{rider_id}\")",
+        "@router.websocket(\"/merchant/{merchant_id}\")",
+        "@router.websocket(\"/user/{user_id}\")"
+      ],
+      "lineCount": 1242
+    },
+    {
+      "file": "backend/app/routes/nduna.py",
+      "prefix": "/nduna",
+      "endpoints": [
+        "@router.get(\"/languages\")",
+        "@router.post(\"/chat\", response_model=ChatResponse)",
+        "@router.post(\"/voice\", response_model=VoiceTranscriptionResponse)",
+        "@router.post(\"/voice/chat\", response_model=ChatResponse)",
+        "@router.get(\"/browse/merchants\", response_model=BrowseResponse)",
+        "@router.get(\"/browse/products\", response_model=BrowseResponse)",
+        "@router.get(\"/browse/{merchant_id}/menu\")",
+        "@router.post(\"/quick-replies\")",
+        "@router.get(\"/greeting/{language}\")"
+      ],
+      "lineCount": 727
+    },
+    {
+      "file": "backend/app/routes/nduna_intelligence.py",
+      "prefix": "/nduna-intelligence",
+      "endpoints": [
+        "@router.get(\"/eta\")",
+        "@router.get(\"/suggest-route\")",
+        "@router.get(\"/alerts/nearby\")",
+        "@router.get(\"/driver/{driver_id}/performance\")",
+        "@router.get(\"/context\")",
+        "@router.get(\"/dashboard\")",
+        "@router.post(\"/optimize-route\")",
+        "@router.post(\"/optimize-multi-pickup\")",
+        "@router.post(\"/optimize-from-orders\")",
+        "@router.get(\"/estimate-savings\")",
+        "@router.get(\"/health\")"
+      ],
+      "lineCount": 870
+    },
+    {
+      "file": "backend/app/routes/auth.py",
+      "prefix": "/auth",
+      "endpoints": [
+        "@router.post(\"/register\")",
+        "@router.post(\"/login\")",
+        "@router.get(\"/me\")",
+        "@router.post(\"/logout\")",
+        "@router.post(\"/refresh\")"
+      ],
+      "lineCount": 110
+    },
+    {
+      "file": "backend/app/routes/delivery_servicemen.py",
+      "prefix": "/delivery_servicemen",
+      "endpoints": [
+        "@router.post(\"/apply\")",
+        "@router.post(\"/pricing\")",
+        "@router.get(\"/verification-status\")",
+        "@router.get(\"/account-status\")",
+        "@router.get(\"/earnings\")",
+        "@router.post(\"/online\")",
+        "@router.post(\"/offline\")"
+      ],
+      "lineCount": 189
+    },
+    {
+      "file": "backend/app/routes/merchants.py",
+      "prefix": "/merchants",
+      "endpoints": [
+        "@router.get(\"/\")",
+        "@router.get(\"/{merchant_id}\")",
+        "@router.get(\"/{merchant_id}/menu\")",
+        "@router.get(\"/{merchant_id}/products/{product_id}\")",
+        "@router.post(\"/\")",
+        "@router.get(\"/my/store\")",
+        "@router.put(\"/my/store\")",
+        "@router.post(\"/my/products\")",
+        "@router.get(\"/my/products\")",
+        "@router.put(\"/my/products/{product_id}\")",
+        "@router.delete(\"/my/products/{product_id}\")",
+        "@router.get(\"/my/orders\")",
+        "@router.get(\"/my/stats\")"
+      ],
+      "lineCount": 578
+    },
+    {
+      "file": "backend/app/routes/refunds.py",
+      "prefix": "/refunds",
+      "endpoints": [
+        "@router.post(\"/request\", response_model=dict)",
+        "@router.get(\"/my-requests\", response_model=List[dict])",
+        "@router.get(\"/{refund_id}\", response_model=dict)",
+        "@router.post(\"/{refund_id}/evidence\", response_model=dict)",
+        "@router.post(\"/{refund_id}/merchant-response\", response_model=dict)",
+        "@router.post(\"/{refund_id}/dispute\", response_model=dict)",
+        "@router.get(\"/disputes/my\", response_model=List[dict])",
+        "@router.post(\"/disputes/{dispute_id}/message\", response_model=dict)",
+        "@router.get(\"/merchant/pending\", response_model=List[dict])",
+        "@router.post(\"/{refund_id}/ai-review\", response_model=dict)"
+      ],
+      "lineCount": 558
+    },
+    {
+      "file": "backend/app/routes/customer_rewards.py",
+      "prefix": "/customer_rewards",
+      "endpoints": [
+        "@router.get(\"/referral-link\", response_model=ReferralLinkResponse)",
+        "@router.get(\"/dashboard\", response_model=RewardsDashboardResponse)",
+        "@router.get(\"/tiers\")",
+        "@router.post(\"/redeem/free-delivery\", response_model=RedeemResponse)",
+        "@router.post(\"/redeem/discount/{amount}\", response_model=RedeemResponse)",
+        "@router.get(\"/coin-history\")",
+        "@router.get(\"/referral-history\")",
+        "@router.get(\"/my-rewards\")",
+        "@router.get(\"/promotions\")",
+        "@router.post(\"/apply-referral\")",
+        "@router.post(\"/earn/daily-checkin\")"
+      ],
+      "lineCount": 450
+    },
+    {
+      "file": "backend/app/routes/payments.py",
+      "prefix": "/payments",
+      "endpoints": [
+        "@router.post(\"/initialize\", response_model=PaymentResponse)",
+        "@router.get(\"/verify/{reference}\", response_model=PaymentResponse)",
+        "@router.post(\"/payout\", response_model=PaymentResponse)",
+        "@router.post(\"/refund\", response_model=PaymentResponse)",
+        "@router.get(\"/banks\", response_model=PaymentResponse)",
+        "@router.post(\"/verify-account\")",
+        "@router.post(\"/webhook\")",
+        "@router.get(\"/history\")"
+      ],
+      "lineCount": 631
+    },
+    {
+      "file": "backend/app/routes/pricing_intelligence.py",
+      "prefix": "/pricing-intelligence",
+      "endpoints": [
+        "@router.post(\"/gaps\", response_model=dict)",
+        "@router.get(\"/gaps\")",
+        "@router.post(\"/gaps/{gap_id}/resolve\")",
+        "@router.get(\"/conversion/by-tier\")",
+        "@router.get(\"/churn/by-offer\")",
+        "@router.post(\"/forecast/daily\")",
+        "@router.get(\"/revenue/daily\")",
+        "@router.get(\"/query-plans\")",
+        "@router.post(\"/query-plans/{plan_name}/execute\")",
+        "@router.get(\"/report\")",
+        "@router.get(\"/health\")"
+      ],
+      "lineCount": 633
+    },
+    {
+      "file": "backend/app/routes/vendors.py",
+      "prefix": "/vendors",
+      "endpoints": [
+        "@router.post(\"/apply\")",
+        "@router.post(\"/documents\")",
+        "@router.get(\"/verification-status\")",
+        "@router.get(\"/account-status\")",
+        "@router.post(\"/submit-verification\")",
+        "@router.get(\"/my/stats\")",
+        "@router.get(\"/my/referrals\")",
+        "@router.get(\"/{vendor_id}\")",
+        "@router.get(\"/{vendor_id}/products\")",
+        "@router.get(\"/{vendor_id}/reviews\")"
+      ],
+      "lineCount": 804
+    },
+    {
+      "file": "backend/app/routes/route_memory.py",
+      "prefix": "/route-memory",
+      "endpoints": [
+        "@router.post(\"/actual-time\", response_model=dict)",
+        "@router.get(\"/actual-time/stats/{driver_id}\")",
+        "@router.post(\"/insights\", response_model=dict)",
+        "@router.post(\"/insights/{insight_id}/vote\", response_model=dict)",
+        "@router.get(\"/insights/nearby\")",
+        "@router.post(\"/feedback\", response_model=dict)",
+        "@router.get(\"/feedback/{driver_id}\")",
+        "@router.get(\"/intelligence\")",
+        "@router.post(\"/segments\", response_model=dict)",
+        "@router.get(\"/health\")"
+      ],
+      "lineCount": 521
+    },
+    {
+      "file": "backend/app/routes/referrals.py",
+      "prefix": "IH-V",
+      "endpoints": [
+        "@router.post(\"/generate/{referral_type}\", response_model=ReferralCodeResponse)",
+        "@router.post(\"/apply\", status_code=200)",
+        "@router.get(\"/stats\", response_model=ReferralStatsResponse)",
+        "@router.get(\"/customer/rewards\", response_model=CustomerRewardsResponse)",
+        "@router.post(\"/redeem/free-delivery\")",
+        "@router.post(\"/redeem/discount/{amount}\")",
+        "@router.get(\"/my-referrals\")",
+        "@router.get(\"/leaderboard\")",
+        "@router.post(\"/admin/process-pending\")",
+        "@router.get(\"/admin/stats\")"
+      ],
+      "lineCount": 333
+    },
+    {
+      "file": "backend/app/routes/users.py",
+      "prefix": "/users",
+      "endpoints": [
+        "@router.get(\"/profile\")",
+        "@router.put(\"/profile\")",
+        "@router.get(\"/orders\")"
+      ],
+      "lineCount": 23
+    },
+    {
+      "file": "backend/app/routes/community.py",
+      "prefix": "/community",
+      "endpoints": [
+        "@router.post(\"/validations\", response_model=dict)",
+        "@router.post(\"/validations/vote\", response_model=dict)",
+        "@router.get(\"/validations/{insight_id}\")",
+        "@router.get(\"/reputation/{driver_id}\")",
+        "@router.post(\"/reputation/update\")",
+        "@router.get(\"/leaderboard\")",
+        "@router.get(\"/knowledge/nearby\")",
+        "@router.post(\"/knowledge/create\")",
+        "@router.post(\"/knowledge/{point_id}/use\")",
+        "@router.post(\"/sync/insights\")",
+        "@router.get(\"/health\")"
+      ],
+      "lineCount": 654
+    },
+    {
+      "file": "backend/app/routes/tracking.py",
+      "prefix": "/tracking",
+      "endpoints": [
+        "@router.websocket(\"/track/{order_id}\")",
+        "@router.websocket(\"/rider/{rider_id}\")",
+        "@router.websocket(\"/user/{user_id}\")"
+      ],
+      "lineCount": 323
+    },
+    {
+      "file": "backend/app/routes/orders.py",
+      "prefix": "/orders",
+      "endpoints": [
+        "@router.post(\"/\", response_model=dict)",
+        "@router.get(\"/{order_id}\")",
+        "@router.get(\"/{order_id}/track\")",
+        "@router.put(\"/{order_id}/status\")",
+        "@router.get(\"/\")",
+        "@router.post(\"/{order_id}/cancel\")"
+      ],
+      "lineCount": 549
+    }
+  ],
+  "models": [
+    {
+      "file": "backend/app/models/referral.py",
+      "name": "ReferralStatus",
+      "fields": [
+        "PENDING",
+        "COMPLETED",
+        "EXPIRED",
+        "VENDOR",
+        "CUSTOMER",
+        "id",
+        "user_id",
+        "code",
+        "referral_type",
+        "created_at",
+        "is_active",
+        "expires_at",
+        "chars",
+        "random_part",
+        "id",
+        "referrer_id",
+        "referee_id",
+        "referral_code",
+        "referral_type",
+        "status"
+      ],
+      "lineCount": 118
+    },
+    {
+      "file": "backend/app/models/trip.py",
+      "name": "DeliveryStatus",
+      "fields": [
+        "PENDING",
+        "RIDER_ASSIGNED",
+        "AT_MERCHANT",
+        "PICKED_UP",
+        "IN_TRANSIT",
+        "ARRIVED",
+        "DELIVERED",
+        "CANCELLED",
+        "BIKE",
+        "CAR",
+        "BICYCLE",
+        "WALKING",
+        "latitude",
+        "longitude",
+        "address",
+        "landmark",
+        "base_fee",
+        "distance_km",
+        "distance_cost",
+        "time_cost"
+      ],
+      "lineCount": 166
+    },
+    {
+      "file": "backend/app/models/order.py",
+      "name": "OrderStatus",
+      "fields": [
+        "PENDING",
+        "CONFIRMED",
+        "PREPARING",
+        "READY",
+        "PICKED_UP",
+        "IN_TRANSIT",
+        "DELIVERED",
+        "CANCELLED",
+        "product_id",
+        "product_name",
+        "quantity",
+        "unit_price",
+        "total_price",
+        "address_label",
+        "address_line1",
+        "address_line2",
+        "city",
+        "area",
+        "latitude",
+        "longitude"
+      ],
+      "lineCount": 114
+    },
+    {
+      "file": "backend/app/models/refund.py",
+      "name": "RefundReason",
+      "fields": [
+        "DEFECTIVE_GOODS",
+        "NOT_AS_DESCRIBED",
+        "WRONG_ITEM",
+        "MISSING_ITEMS",
+        "DAMAGED_IN_TRANSIT",
+        "LATE_DELIVERY",
+        "ORDER_CANCELLED",
+        "FOOD_SAFETY",
+        "ALLERGEN_ISSUES",
+        "COUNTERFEIT",
+        "PRICE_ERROR",
+        "OTHER",
+        "REQUESTED",
+        "AI_REVIEW",
+        "PENDING_MERCHANT",
+        "PENDING_EVIDENCE",
+        "APPROVED",
+        "PARTIALLY_APPROVED",
+        "REJECTED",
+        "ESCALATED"
+      ],
+      "lineCount": 338
+    },
+    {
+      "file": "backend/app/models/user.py",
+      "name": "UserRole",
+      "fields": [
+        "CUSTOMER",
+        "MERCHANT",
+        "RIDER",
+        "ADMIN",
+        "BUYER",
+        "DRIVER",
+        "latitude",
+        "longitude",
+        "area",
+        "city",
+        "province",
+        "updated_at",
+        "id",
+        "email",
+        "phone",
+        "full_name",
+        "hashed_password",
+        "role",
+        "is_active",
+        "is_verified"
+      ],
+      "lineCount": 94
+    },
+    {
+      "file": "backend/app/models/customer_rewards.py",
+      "name": "CustomerTier",
+      "fields": [
+        "BRONZE",
+        "SILVER",
+        "GOLD",
+        "PLATINUM",
+        "id",
+        "customer_id",
+        "amount",
+        "transaction_type",
+        "description",
+        "related_referral_id",
+        "created_at",
+        "balance_after",
+        "id",
+        "customer_id",
+        "referral_code",
+        "tier",
+        "hashi_coins_balance",
+        "total_coins_earned",
+        "total_coins_spent",
+        "total_referrals"
+      ],
+      "lineCount": 182
+    },
+    {
+      "file": "backend/app/models/driver.py",
+      "name": "DriverStatus",
+      "fields": [
+        "OFFLINE",
+        "AVAILABLE",
+        "BUSY",
+        "STANDARD",
+        "LUXURY",
+        "DELIVERY",
+        "make",
+        "model",
+        "year",
+        "color",
+        "license_plate",
+        "vehicle_type",
+        "latitude",
+        "longitude",
+        "heading",
+        "speed",
+        "last_updated",
+        "id",
+        "user_id",
+        "full_name"
+      ],
+      "lineCount": 111
+    },
+    {
+      "file": "backend/app/models/product.py",
+      "name": "ProductStatus",
+      "fields": [
+        "AVAILABLE",
+        "OUT_OF_STOCK",
+        "DISCONTINUED",
+        "HIDDEN",
+        "id",
+        "url",
+        "alt_text",
+        "is_primary",
+        "display_order",
+        "price",
+        "original_price",
+        "vat_inclusive",
+        "vat_amount",
+        "average_rating",
+        "total_reviews",
+        "rating_distribution",
+        "id",
+        "merchant_id",
+        "name",
+        "description"
+      ],
+      "lineCount": 149
+    },
+    {
+      "file": "backend/app/models/pricing_intelligence.py",
+      "name": "PricingTier",
+      "fields": [
+        "ECONOMY",
+        "STANDARD",
+        "PREMIUM",
+        "FREE_DELIVERY",
+        "PERCENTAGE_OFF",
+        "FIXED_DISCOUNT",
+        "BOGO",
+        "id",
+        "merchant_id",
+        "product_id",
+        "our_price",
+        "competitor_price",
+        "gap_percentage",
+        "gap_direction",
+        "estimated_lost_orders",
+        "estimated_lost_revenue",
+        "detected_at",
+        "resolved_at",
+        "resolution_action",
+        "tier"
+      ],
+      "lineCount": 159
+    },
+    {
+      "file": "backend/app/models/route_memory.py",
+      "name": "RoadType",
+      "fields": [
+        "HIGHWAY",
+        "MAIN",
+        "RESIDENTIAL",
+        "INFORMAL",
+        "DIRT",
+        "SHORTCUT",
+        "AVOID",
+        "SLOW_ZONE",
+        "GOOD_ALTERNATIVE",
+        "ROAD_WORK",
+        "UNSAFE",
+        "CLEAR",
+        "RAIN",
+        "HEAVY_RAIN",
+        "SMOOTH",
+        "OK",
+        "DELAYED",
+        "ROAD_WORK",
+        "HEAVY_TRAFFIC",
+        "WEATHER"
+      ],
+      "lineCount": 387
+    },
+    {
+      "file": "backend/app/models/verification.py",
+      "name": "VerificationStatus",
+      "fields": [
+        "UNVERIFIED",
+        "PENDING",
+        "VERIFIED",
+        "REJECTED",
+        "SUSPENDED",
+        "CAR",
+        "MOTORCYCLE",
+        "BICYCLE",
+        "SCOOTER",
+        "ON_FOOT",
+        "ID_DOCUMENT",
+        "COMPANY_REGISTRATION",
+        "BUSINESS_LICENSE",
+        "TAX_CLEARANCE",
+        "PROOF_OF_ADDRESS",
+        "DRIVERS_LICENSE",
+        "VEHICLE_REGISTRATION",
+        "NUMBER_PLATE_PHOTO",
+        "PROFILE_PHOTO",
+        "id"
+      ],
+      "lineCount": 169
+    },
+    {
+      "file": "backend/app/models/account.py",
+      "name": "WarningType",
+      "fields": [
+        "ORDER_FRAUD",
+        "LATE_DELIVERY",
+        "ORDER_CANCELLATION",
+        "CUSTOMER_COMPLAINT",
+        "INAPPROPRIATE_BEHAVIOUR",
+        "FAKE_LISTING",
+        "PRICE_MANIPULATION",
+        "DELIVERY_DAMAGE",
+        "NO_SHOW",
+        "HARASSMENT",
+        "EXCESSIVE_WARNINGS",
+        "SUSPECTED_FRAUD",
+        "PAYMENT_ISSUES",
+        "POLICY_VIOLATION",
+        "INVESTIGATION",
+        "CRIMINAL_ACTIVITY",
+        "FRAUD",
+        "THEFT",
+        "VIOLENCE",
+        "REPEATED_VIOLATIONS"
+      ],
+      "lineCount": 165
+    },
+    {
+      "file": "backend/app/models/delivery.py",
+      "name": "TransportMode",
+      "fields": [
+        "CAR",
+        "MOTORCYCLE",
+        "SCOOTER",
+        "BICYCLE",
+        "ON_FOOT",
+        "WHEELCHAIR",
+        "RUNNING",
+        "ROLLERBLADE",
+        "EXPRESS",
+        "STANDARD",
+        "BUDGET",
+        "ECO",
+        "base_fee",
+        "per_km_rate",
+        "per_minute_rate",
+        "minimum_fee",
+        "maximum_distance_km",
+        "surge_multiplier",
+        "transport_mode",
+        "id"
+      ],
+      "lineCount": 144
+    },
+    {
+      "file": "backend/app/models/community.py",
+      "name": "ValidationStatus",
+      "fields": [
+        "PENDING",
+        "CONFIRMED",
+        "DISPUTED",
+        "EXPIRED",
+        "REMOVED",
+        "NEWCOMER",
+        "SCOUT",
+        "NAVIGATOR",
+        "EXPERT",
+        "LEGEND",
+        "SHORTCUT",
+        "TRAFFIC_PATTERN",
+        "SAFETY",
+        "PARKING",
+        "ACCESS_POINT",
+        "DELIVERY_TIP",
+        "AVOID_ZONE",
+        "WEATHER_HAZARD",
+        "id",
+        "insight_id"
+      ],
+      "lineCount": 285
+    },
+    {
+      "file": "backend/app/models/buyer.py",
+      "name": "BuyerStatus",
+      "fields": [
+        "ACTIVE",
+        "INACTIVE",
+        "SUSPENDED",
+        "id",
+        "label",
+        "address_line1",
+        "address_line2",
+        "city",
+        "area",
+        "postal_code",
+        "latitude",
+        "longitude",
+        "is_default",
+        "delivery_instructions",
+        "id",
+        "phone_number",
+        "email",
+        "full_name",
+        "otp_secret",
+        "otp_expires"
+      ],
+      "lineCount": 92
+    }
+  ],
+  "services": [
+    "backend/app/services/telegram_bot.py",
+    "backend/app/services/route_optimizer.py",
+    "backend/app/services/auth.py",
+    "backend/app/services/delivery_fee.py",
+    "backend/app/services/matching.py",
+    "backend/app/services/file_upload.py",
+    "backend/app/services/payout_scheduler.py",
+    "backend/app/services/paystack.py"
+  ]
+}

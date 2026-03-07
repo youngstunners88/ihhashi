@@ -1,0 +1,304 @@
+# ============================================================================
+# iHhashi Swarm — Master Configuration
+# South Africa's #1 Food Delivery Platform - AI Development Orchestration
+# ============================================================================
+
+swarm:
+  name: "iHhashi Swarm"
+  version: "1.0.0"
+  project_root: "/home/user/ihhashi"
+  description: "Parallel AI development force for iHhashi delivery platform"
+
+# ============================================================================
+# Governance (Paperclip Layer)
+# ============================================================================
+governance:
+  engine: paperclip
+  config_path: swarm/paperclip/
+
+  budget:
+    daily_limit_zar: 500
+    per_task_limit_zar: 50
+    alert_threshold: 0.8
+    llm_providers:
+      groq:
+        priority: 1
+        cost_per_1k_tokens: 0.001
+        model: "llama-3.3-70b-versatile"
+      openai:
+        priority: 2
+        cost_per_1k_tokens: 0.03
+        model: "gpt-4"
+      anthropic:
+        priority: 3
+        cost_per_1k_tokens: 0.015
+        model: "claude-opus-4-6"
+
+  approval_gates:
+    - id: payment_changes
+      pattern: "backend/app/routes/payments*"
+      requires: human_approval
+      description: "Any change to payment processing logic"
+    - id: user_data_model
+      pattern: "backend/app/models/user*"
+      requires: compliance_review
+      description: "Changes to user data models (POPIA sensitive)"
+    - id: verification_model
+      pattern: "backend/app/models/verification*"
+      requires: compliance_review
+      description: "KYC/verification changes"
+    - id: infrastructure
+      pattern: "docker-compose*"
+      requires: lead_approval
+      description: "Infrastructure configuration changes"
+    - id: ci_cd
+      pattern: ".github/workflows/*"
+      requires: lead_approval
+      description: "CI/CD pipeline changes"
+    - id: production_deploy
+      pattern: "render.yaml"
+      requires: human_approval
+      description: "Production deployment changes"
+    - id: payout_schedule
+      pattern: "backend/app/services/payout_scheduler*"
+      requires: human_approval
+      description: "Automated payout logic changes"
+
+  heartbeat_interval_seconds: 300
+
+# ============================================================================
+# Agent Hierarchy
+# ============================================================================
+hierarchy:
+  # Tier 1: Domain Leads
+  leads:
+    - id: platform-architect
+      name: "Platform Architect"
+      personality: swarm/agents/operations/platform-architect.md
+      skills: [deep-architecture, memory, orchestration]
+      scope:
+        - backend/app/main.py
+        - docker-compose.yml
+        - .github/workflows/
+        - backend/app/config.py
+
+    - id: ai-ml-lead
+      name: "AI/ML Lead"
+      personality: swarm/agents/operations/ai-ml-lead.md
+      skills: [rag, middleware, memory]
+      scope:
+        - backend/app/routes/nduna*.py
+        - backend/app/routes/pricing_intelligence.py
+
+    - id: delivery-ops-lead
+      name: "Delivery Operations Lead"
+      personality: swarm/agents/operations/delivery-ops-lead.md
+      skills: [langgraph-state-graphs, persistence]
+      scope:
+        - backend/app/routes/trips.py
+        - backend/app/routes/community.py
+        - backend/app/services/matching.py
+
+    - id: growth-lead
+      name: "Growth Lead"
+      personality: swarm/agents/product/growth-lead.md
+      skills: [langchain-fundamentals]
+      scope:
+        - backend/app/routes/referrals.py
+        - backend/app/routes/customer_rewards.py
+        - marketing/
+
+  # Tier 2: Specialists
+  specialists:
+    engineering:
+      - id: backend-engineer
+        personality: swarm/agents/engineering/engineering-backend-architect.md
+        reports_to: platform-architect
+      - id: frontend-engineer
+        personality: swarm/agents/engineering/engineering-frontend-developer.md
+        reports_to: platform-architect
+      - id: mobile-engineer
+        personality: swarm/agents/engineering/engineering-mobile-app-builder.md
+        reports_to: platform-architect
+      - id: logistics-engineer
+        personality: swarm/agents/engineering/logistics-engineer.md
+        reports_to: delivery-ops-lead
+      - id: payments-engineer
+        personality: swarm/agents/engineering/payments-engineer.md
+        reports_to: platform-architect
+      - id: devops-engineer
+        personality: swarm/agents/engineering/engineering-devops-automator.md
+        reports_to: platform-architect
+
+    sa_specific:
+      - id: localization-expert
+        personality: swarm/agents/sa-specific/localization-expert.md
+        reports_to: ai-ml-lead
+      - id: compliance-officer
+        personality: swarm/agents/sa-specific/compliance-officer.md
+        reports_to: platform-architect
+      - id: township-delivery-specialist
+        personality: swarm/agents/sa-specific/township-delivery.md
+        reports_to: delivery-ops-lead
+      - id: loadshedding-resilience-engineer
+        personality: swarm/agents/sa-specific/loadshedding-resilience.md
+        reports_to: platform-architect
+      - id: pricing-strategist
+        personality: swarm/agents/sa-specific/pricing-strategist.md
+        reports_to: ai-ml-lead
+      - id: community-moderator
+        personality: swarm/agents/sa-specific/community-moderator.md
+        reports_to: delivery-ops-lead
+      - id: nduna-architect
+        personality: swarm/agents/sa-specific/nduna-architect.md
+        reports_to: ai-ml-lead
+      - id: route-intelligence
+        personality: swarm/agents/sa-specific/route-intelligence.md
+        reports_to: delivery-ops-lead
+
+    quality:
+      - id: qa-engineer
+        personality: swarm/agents/quality/qa-engineer.md
+        reports_to: platform-architect
+      - id: security-auditor
+        personality: swarm/agents/quality/security-auditor.md
+        reports_to: platform-architect
+
+# ============================================================================
+# Task Routing Rules
+# ============================================================================
+routing:
+  file_patterns:
+    - pattern: "backend/app/routes/nduna*"
+      assign: [ai-ml-lead, nduna-architect, localization-expert]
+    - pattern: "backend/app/routes/payments*"
+      assign: [payments-engineer, compliance-officer]
+      gate: payment_changes
+    - pattern: "backend/app/services/paystack*"
+      assign: [payments-engineer, compliance-officer]
+      gate: payment_changes
+    - pattern: "backend/app/services/payout_scheduler*"
+      assign: [payments-engineer]
+      gate: payout_schedule
+    - pattern: "backend/app/services/route_optimizer*"
+      assign: [logistics-engineer, route-intelligence]
+    - pattern: "backend/app/routes/community*"
+      assign: [community-moderator, delivery-ops-lead]
+    - pattern: "backend/app/routes/route_memory*"
+      assign: [route-intelligence, delivery-ops-lead]
+    - pattern: "backend/app/routes/pricing_intelligence*"
+      assign: [pricing-strategist, ai-ml-lead]
+    - pattern: "backend/app/models/user*"
+      assign: [backend-engineer, compliance-officer]
+      gate: user_data_model
+    - pattern: "backend/app/models/verification*"
+      assign: [backend-engineer, compliance-officer]
+      gate: verification_model
+    - pattern: "backend/app/i18n/*"
+      assign: [localization-expert]
+    - pattern: "backend/app/routes/websocket*"
+      assign: [backend-engineer, loadshedding-resilience-engineer]
+    - pattern: "frontend/src/**"
+      assign: [frontend-engineer]
+    - pattern: "frontend/android/**"
+      assign: [mobile-engineer]
+    - pattern: "docker-compose*"
+      assign: [devops-engineer, platform-architect]
+      gate: infrastructure
+    - pattern: ".github/workflows/*"
+      assign: [devops-engineer]
+      gate: ci_cd
+
+  keywords:
+    - match: "township|spaza|informal|cash.on.delivery"
+      assign: [township-delivery-specialist, delivery-ops-lead]
+    - match: "loadshedding|load.shedding|offline|power.outage|eskom"
+      assign: [loadshedding-resilience-engineer, platform-architect]
+    - match: "language|translate|i18n|zulu|xhosa|sotho|afrikaans|ndebele"
+      assign: [localization-expert, nduna-architect]
+    - match: "price|surge|fee|delivery.cost|dynamic.pricing"
+      assign: [pricing-strategist, ai-ml-lead]
+    - match: "reputation|badge|trust|community|leaderboard"
+      assign: [community-moderator, delivery-ops-lead]
+    - match: "security|popia|compliance|audit|vulnerability"
+      assign: [security-auditor, compliance-officer]
+    - match: "test|qa|coverage|playwright|vitest|pytest"
+      assign: [qa-engineer]
+    - match: "nduna|chatbot|groq|conversation"
+      assign: [nduna-architect, ai-ml-lead]
+    - match: "route|eta|navigation|shortcut"
+      assign: [route-intelligence, logistics-engineer]
+    - match: "deploy|release|production|ci.cd"
+      assign: [devops-engineer, platform-architect]
+      gate: production_deploy
+
+# ============================================================================
+# Communication Channels
+# ============================================================================
+channels:
+  task_queue:
+    backend: redis
+    url: "redis://localhost:6379/1"  # DB 1 (separate from app cache on DB 0)
+
+  audit_log:
+    backend: file
+    path: swarm/state/audit.log
+    paperclip_sync: true
+
+  notifications:
+    telegram:
+      enabled: true
+      via: openfang
+    console:
+      enabled: true
+
+# ============================================================================
+# Context Generation
+# ============================================================================
+context:
+  auto_refresh: true
+  refresh_interval_minutes: 60
+  output_dir: swarm/context/
+  sources:
+    - type: fastapi_routes
+      path: backend/app/main.py
+      output: backend-map.json
+    - type: pydantic_models
+      path: backend/app/models/
+      output: model-schema.json
+    - type: react_components
+      path: frontend/src/
+      output: frontend-map.json
+    - type: api_surface
+      path: backend/app/routes/
+      output: api-surface.json
+
+# ============================================================================
+# South Africa Specific Configuration
+# ============================================================================
+sa_config:
+  currency: ZAR
+  vat_rate: 0.15
+  timezone: Africa/Johannesburg
+  supported_languages:
+    - en   # English
+    - zu   # isiZulu
+    - xh   # isiXhosa
+    - af   # Afrikaans
+    - st   # Sesotho
+    - tn   # Setswana
+    - nr   # isiNdebele
+    - ss   # siSwati
+    - ve   # Tshivenda
+    - ts   # Xitsonga
+    - nso  # Sepedi
+  expansion_phases:
+    - phase: 1
+      city: Johannesburg
+      areas: [Sandton, Rosebank, Braamfontein, Soweto, Midrand]
+    - phase: 2
+      city: Cape Town
+      areas: [CBD, Sea Point, Observatory, Stellenbosch, Khayelitsha]
+    - phase: 3
+      city: Durban
+      areas: [Umhlanga, Berea, KwaMashu, Pinetown]

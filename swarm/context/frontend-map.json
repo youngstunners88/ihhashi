@@ -1,0 +1,171 @@
+{
+  "generatedAt": "2026-03-05T17:42:37.269Z",
+  "pages": [
+    {
+      "file": "frontend/src/pages/HomePage.tsx",
+      "name": "HomePage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/OrdersPage.tsx",
+      "name": "OrdersPage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/ProfilePage.tsx",
+      "name": "ProfilePage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/RiderDashboard.tsx",
+      "name": "RiderDashboard",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/MerchantRegistrationPage.tsx",
+      "name": "MerchantRegistrationPage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/index.ts",
+      "name": "index",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/OrderTrackingPage.tsx",
+      "name": "OrderTrackingPage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/MerchantPage.tsx",
+      "name": "MerchantPage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/MerchantDashboard.tsx",
+      "name": "MerchantDashboard",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/CheckoutPage.tsx",
+      "name": "CheckoutPage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/Home.tsx",
+      "name": "Home",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/NotFoundPage.tsx",
+      "name": "NotFoundPage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/CartPage.tsx",
+      "name": "CartPage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/DriverRegistrationPage.tsx",
+      "name": "DriverRegistrationPage",
+      "type": "page"
+    },
+    {
+      "file": "frontend/src/pages/PaymentSuccessPage.tsx",
+      "name": "PaymentSuccessPage",
+      "type": "page"
+    }
+  ],
+  "components": [
+    {
+      "file": "frontend/src/components/MerchantCard.tsx",
+      "name": "MerchantCard",
+      "type": "component"
+    },
+    {
+      "file": "frontend/src/components/SplashScreen.tsx",
+      "name": "SplashScreen",
+      "type": "component"
+    },
+    {
+      "file": "frontend/src/components/LanguageToggle.tsx",
+      "name": "LanguageToggle",
+      "type": "component"
+    },
+    {
+      "file": "frontend/src/components/PaymentSelector.tsx",
+      "name": "PaymentSelector",
+      "type": "component"
+    },
+    {
+      "file": "frontend/src/components/index.ts",
+      "name": "index",
+      "type": "component"
+    },
+    {
+      "file": "frontend/src/components/Header.tsx",
+      "name": "Header",
+      "type": "component"
+    },
+    {
+      "file": "frontend/src/components/CategoryBar.tsx",
+      "name": "CategoryBar",
+      "type": "component"
+    },
+    {
+      "file": "frontend/src/components/LanguageSelector.tsx",
+      "name": "LanguageSelector",
+      "type": "component"
+    }
+  ],
+  "hooks": [
+    {
+      "file": "frontend/src/hooks/useCart.ts",
+      "name": "useCart",
+      "type": "hook"
+    },
+    {
+      "file": "frontend/src/hooks/index.ts",
+      "name": "index",
+      "type": "hook"
+    },
+    {
+      "file": "frontend/src/hooks/useSupabase.ts",
+      "name": "useSupabase",
+      "type": "hook"
+    },
+    {
+      "file": "frontend/src/hooks/usePostHog.ts",
+      "name": "usePostHog",
+      "type": "hook"
+    },
+    {
+      "file": "frontend/src/hooks/useLoadShedding.ts",
+      "name": "useLoadShedding",
+      "type": "hook"
+    },
+    {
+      "file": "frontend/src/hooks/useWebSocket.ts",
+      "name": "useWebSocket",
+      "type": "hook"
+    },
+    {
+      "file": "frontend/src/hooks/useDataSaver.ts",
+      "name": "useDataSaver",
+      "type": "hook"
+    }
+  ],
+  "services": [
+    {
+      "file": "frontend/src/services/index.ts",
+      "name": "index",
+      "type": "service"
+    },
+    {
+      "file": "frontend/src/services/websocket.ts",
+      "name": "websocket",
+      "type": "service"
+    }
+  ]
+}

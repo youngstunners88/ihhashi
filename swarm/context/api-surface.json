@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-03-05T17:42:37.273Z",
+  "totalEndpoints": 0,
+  "routeModules": [
+    {
+      "name": "api_v1",
+      "file": "backend/app/routes/api_v1.py",
+      "endpointCount": 0
+    },
+    {
+      "name": "websocket_router",
+      "file": "backend/app/routes/websocket_router.py",
+      "endpointCount": 0
+    },
+    {
+      "name": "nduna_router",
+      "file": "backend/app/routes/nduna_router.py",
+      "endpointCount": 0
+    },
+    {
+      "name": "route_memory_router",
+      "file": "backend/app/routes/route_memory_router.py",
+      "endpointCount": 0
+    }
+  ]
+}
