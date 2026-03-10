@@ -12,9 +12,10 @@ services:
       - mongodb_data:/data/db
       - ./backend/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-ihhashi}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-ihhashi_dev_2024}
-      MONGO_INITDB_DATABASE: ihhashi
+      # IMPORTANT: Override these defaults in production via .env file
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:?Set MONGO_USERNAME in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-ihhashi}
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 10s
@@ -53,12 +54,12 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=development
-      - MONGODB_URL=mongodb://${MONGO_USERNAME:-ihhashi}:${MONGO_PASSWORD:-ihhashi_dev_2024}@mongodb:27017/ihhashi?authSource=admin
-      - DB_NAME=ihhashi
+      - MONGODB_URL=mongodb://${MONGO_USERNAME:?Set MONGO_USERNAME in .env}:${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}@mongodb:27017/${MONGO_DB_NAME:-ihhashi}?authSource=admin
+      - DB_NAME=${MONGO_DB_NAME:-ihhashi}
       - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_change_in_production_32chars}
-      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://frontend:5173
-      - DEBUG=true
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env (min 32 chars)}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://frontend:5173}
+      - DEBUG=${DEBUG:-true}
     volumes:
       - ./backend:/app
       - /app/__pycache__

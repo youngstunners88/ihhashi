@@ -637,9 +637,60 @@ def process_merchant_payout(self, order_id: str):
     }
     
     db.payouts.insert_one(payout)
-    
-    # TODO: Integrate with payment provider for actual transfer
-    
+
+    # Initiate transfer via Paystack
+    try:
+        import httpx
+        from app.config import settings
+        headers = {
+            "Authorization": f"Bearer {settings.paystack_secret_key}",
+            "Content-Type": "application/json"
+        }
+
+        # Get merchant bank details
+        merchant = db.users.find_one({"id": merchant_id})
+        if merchant and merchant.get("bank_account_number") and merchant.get("bank_code"):
+            # Create transfer recipient
+            with httpx.Client() as client:
+                recipient_resp = client.post(
+                    "https://api.paystack.co/transferrecipient",
+                    headers=headers,
+                    json={
+                        "type": "nuban",
+                        "name": merchant.get("name", "Merchant"),
+                        "account_number": merchant["bank_account_number"],
+                        "bank_code": merchant["bank_code"],
+                        "currency": "ZAR"
+                    }
+                ).json()
+
+                if recipient_resp.get("status"):
+                    recipient_code = recipient_resp["data"]["recipient_code"]
+                    transfer_resp = client.post(
+                        "https://api.paystack.co/transfer",
+                        headers=headers,
+                        json={
+                            "amount": int(payout_amount * 100),
+                            "recipient": recipient_code,
+                            "reason": f"Payout for order {order_id}",
+                            "currency": "ZAR"
+                        }
+                    ).json()
+
+                    if transfer_resp.get("status"):
+                        db.payouts.update_one(
+                            {"order_id": order_id},
+                            {"$set": {
+                                "status": "processing",
+                                "transfer_code": transfer_resp["data"].get("transfer_code")
+                            }}
+                        )
+                        return {"status": "processing", "payout_amount": payout_amount, "platform_fee": platform_fee}
+
+        logger.warning(f"Payout for order {order_id}: merchant bank details missing or transfer failed")
+    except Exception as e:
+        logger.error(f"Payout transfer failed for order {order_id}: {e}")
+
     return {
         "status": "pending",
         "payout_amount": payout_amount,
@@ -673,13 +724,44 @@ def process_refund(self, order_id: str, reason: str, amount: Optional[float] = N
     }
     
     db.refunds.insert_one(refund)
-    
-    # TODO: Integrate with Paystack/Yoco for actual refund
-    
+
+    # Initiate refund via Paystack
+    try:
+        payment = db.payments.find_one({"order_id": order_id, "status": "success"})
+        if payment and payment.get("reference"):
+            import httpx
+            from app.config import settings
+            headers = {
+                "Authorization": f"Bearer {settings.paystack_secret_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {"transaction": payment["reference"]}
+            if refund_amount and refund_amount < order.get("total", 0):
+                payload["amount"] = int(refund_amount * 100)
+
+            with httpx.Client() as client:
+                refund_resp = client.post(
+                    "https://api.paystack.co/refund",
+                    headers=headers,
+                    json=payload
+                ).json()
+
+                if refund_resp.get("status"):
+                    db.refunds.update_one(
+                        {"order_id": order_id},
+                        {"$set": {"status": "processing", "provider_reference": refund_resp["data"].get("id")}}
+                    )
+                else:
+                    logger.warning(f"Paystack refund failed for order {order_id}: {refund_resp.get('message')}")
+        else:
+            logger.warning(f"No payment record found for refund on order {order_id}")
+    except Exception as e:
+        logger.error(f"Refund processing failed for order {order_id}: {e}")
+
     # Update order
     db.orders.update_one(
         {"_id": order_id},
-        {"$set": {"payment_status": "refunded"}}
+        {"$set": {"payment_status": "refund_pending"}}
     )
     
     return {
@@ -713,4 +795,59 @@ def request_order_review(order_id: str):
         channels=["push"]
     )
     
+    return {"status": "sent"}
+
+
+@shared_task
+def notify_merchant_new_order(order_id: str, merchant_id: Optional[str] = None):
+    """
+    Send notification to merchant about a new order.
+    """
+    db = get_db()
+    order = db.orders.find_one({"_id": order_id})
+
+    if not order:
+        return {"status": "error", "message": "Order not found"}
+
+    target_merchant_id = merchant_id or order.get("merchant_id") or order.get("store_id")
+    if not target_merchant_id:
+        return {"status": "error", "message": "No merchant ID found"}
+
+    from app.celery_worker.alerts import send_customer_notification
+    send_customer_notification.delay(
+        user_id=target_merchant_id,
+        order_id=order_id,
+        event="new_order",
+        message=f"New order #{order_id[-6:]}! Total: R{order.get('total', 0):.2f}",
+        channels=["push", "sms"]
+    )
+
+    logger.info(f"Merchant {target_merchant_id} notified about order {order_id}")
+    return {"status": "sent"}
+
+
+@shared_task
+def send_payout_notification(user_id: str, amount: float, status: str):
+    """
+    Notify a user (driver/merchant) about payout status.
+    """
+    if not user_id:
+        return {"status": "error", "message": "No user ID"}
+
+    message = (
+        f"Your payout of R{amount:.2f} has been processed successfully!"
+        if status == "success"
+        else f"Your payout of R{amount:.2f} failed. Please check your bank details."
+    )
+
+    from app.celery_worker.alerts import send_customer_notification
+    send_customer_notification.delay(
+        user_id=user_id,
+        order_id=None,
+        event=f"payout_{status}",
+        message=message,
+        channels=["push"]
+    )
+
+    logger.info(f"Payout {status} notification sent to user {user_id}")
     return {"status": "sent"}

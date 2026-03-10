@@ -93,9 +93,14 @@ api.interceptors.response.use(
     }
 
     // Generic error handling with user-friendly message
-    const message = 
-      (error.response?.data as any)?.detail || 
-      (error.response?.data as any)?.message ||
+    interface ErrorResponseData {
+      detail?: string;
+      message?: string;
+    }
+    const errorData = error.response?.data as ErrorResponseData | undefined;
+    const message =
+      errorData?.detail ||
+      errorData?.message ||
       'Something went wrong. Please try again.';
     
     return Promise.reject(new Error(message));
@@ -180,11 +185,11 @@ export const authAPI = {
 // Orders API
 // ============================================================================
 export const ordersAPI = {
-  create: (data: any) => api.post('/orders', data),
+  create: (data: { merchant_id: string; items: Array<{ product_id: string; quantity: number }>; delivery_address?: string; notes?: string; payment_method?: string }) => api.post('/orders', data),
   list: (params?: { status?: string; limit?: number; offset?: number }) =>
     api.get('/orders', { params }),
   get: (id: string) => api.get(`/orders/${id}`),
-  update: (id: string, data: any) => api.patch(`/orders/${id}`, data),
+  update: (id: string, data: { status?: string; notes?: string }) => api.patch(`/orders/${id}`, data),
   cancel: (id: string) => api.post(`/orders/${id}/cancel`),
   rate: (id: string, rating: number, comment?: string) =>
     api.post(`/orders/${id}/rate`, { rating, comment }),
@@ -250,7 +255,7 @@ export const paymentsAPI = {
 // ============================================================================
 export const usersAPI = {
   profile: () => api.get('/users/me'),
-  updateProfile: (data: any) => api.patch('/users/me', data),
+  updateProfile: (data: { name?: string; phone?: string; email?: string; avatar_url?: string }) => api.patch('/users/me', data),
   updateLocation: (lat: number, lng: number, address?: string) =>
     api.patch('/users/location', { lat, lng, address }),
   updateLanguage: (language: string) =>
@@ -271,7 +276,7 @@ export const addressesAPI = {
     lng: number;
     instructions?: string;
   }) => api.post('/addresses', data),
-  update: (id: string, data: any) => api.patch(`/addresses/${id}`, data),
+  update: (id: string, data: { label?: string; address?: string; lat?: number; lng?: number; instructions?: string }) => api.patch(`/addresses/${id}`, data),
   delete: (id: string) => api.delete(`/addresses/${id}`),
   setDefault: (id: string) => api.post(`/addresses/${id}/default`),
 };
@@ -284,8 +289,8 @@ export const vendorAPI = {
   orders: (params?: { status?: string }) =>
     api.get('/vendors/orders', { params }),
   products: () => api.get('/vendors/products'),
-  createProduct: (data: any) => api.post('/vendors/products', data),
-  updateProduct: (id: string, data: any) =>
+  createProduct: (data: { name: string; price: number; description?: string; category?: string; image_url?: string; is_available?: boolean }) => api.post('/vendors/products', data),
+  updateProduct: (id: string, data: { name?: string; price?: number; description?: string; category?: string; image_url?: string; is_available?: boolean }) =>
     api.patch(`/vendors/products/${id}`, data),
   deleteProduct: (id: string) => api.delete(`/vendors/products/${id}`),
   updateStatus: (isOpen: boolean) =>
@@ -299,7 +304,7 @@ export const vendorAPI = {
 // ============================================================================
 export const riderAPI = {
   profile: () => api.get('/riders/me'),
-  updateProfile: (data: any) => api.patch('/riders/me', data),
+  updateProfile: (data: { name?: string; phone?: string; vehicle_type?: string; license_plate?: string }) => api.patch('/riders/me', data),
   status: (status: 'online' | 'offline' | 'busy') =>
     api.patch('/riders/status', { status }),
   earnings: (period?: string) =>

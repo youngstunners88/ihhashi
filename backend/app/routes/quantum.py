@@ -7,7 +7,11 @@ from typing import Optional
 import os
 import re
 import json
+import uuid
+import logging
 from datetime import datetime, timezone
+
+from app.database import get_collection
 
 from ..models.quantum_extraction import (
     QuantumMerchantProfile,
@@ -403,18 +407,68 @@ async def quantum_onboard(request: QuantumOnboardRequest):
             if hasattr(profile, field):
                 setattr(profile, field, value)
     
-    # TODO: Create actual merchant in database
-    # This would involve:
-    # 1. Creating/updating user with merchant role
-    # 2. Creating merchant profile
-    # 3. Creating products from extracted menu
-    # 4. Setting up delivery zones
-    
+    # Create merchant in database
+    db = get_collection("merchants")
+    users_col = get_collection("users")
+    products_col = get_collection("products")
+
+    merchant_id = str(uuid.uuid4())
+
+    # 1. Create/update user with merchant role
+    merchant_user = {
+        "id": merchant_id,
+        "name": profile.business_name,
+        "role": "merchant",
+        "phone": getattr(profile, 'phone', None),
+        "email": getattr(profile, 'email', None),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
+    await users_col.update_one(
+        {"id": merchant_id},
+        {"$set": merchant_user},
+        upsert=True
+    )
+
+    # 2. Create merchant profile
+    merchant_doc = {
+        "id": merchant_id,
+        "owner_id": merchant_id,
+        "name": profile.business_name,
+        "description": getattr(profile, 'description', ''),
+        "category": getattr(profile, 'category', 'general'),
+        "address": getattr(profile, 'address', ''),
+        "is_active": True,
+        "is_open": False,
+        "created_at": datetime.now(timezone.utc),
+        "onboarded_via": "quantum",
+        "extraction_id": request.extraction_id,
+    }
+    await db.insert_one(merchant_doc)
+
+    # 3. Create products from extracted menu
+    products_created = 0
+    menu_items = getattr(profile, 'menu_items', []) or []
+    for item in menu_items:
+        product_doc = {
+            "id": str(uuid.uuid4()),
+            "merchant_id": merchant_id,
+            "name": item.get("name", "Unnamed Item") if isinstance(item, dict) else str(item),
+            "price": item.get("price", 0) if isinstance(item, dict) else 0,
+            "category": item.get("category", "general") if isinstance(item, dict) else "general",
+            "is_available": True,
+            "created_at": datetime.now(timezone.utc),
+        }
+        await products_col.insert_one(product_doc)
+        products_created += 1
+
+    logger.info(f"Quantum onboarded merchant {merchant_id} with {products_created} products")
+
     return {
         "success": True,
         "message": "Merchant onboarded successfully",
-        "merchant_id": "TODO",
-        "products_created": profile.total_products,
+        "merchant_id": merchant_id,
+        "products_created": products_created,
         "profile": profile.dict()
     }
 

@@ -1025,23 +1025,130 @@ async def validate_room_access(
 
 async def handle_chat_message(user_id: str, data: dict):
     """Handle chat messages between users"""
-    # TODO: Implement chat message handling
-    pass
+    recipient_id = data.get("recipient_id")
+    message_text = data.get("message", "")
+    order_id = data.get("order_id")
+
+    if not recipient_id or not message_text:
+        logger.warning(f"Invalid chat message from user {user_id}: missing recipient or message")
+        return
+
+    messages_col = get_collection("messages")
+    message_doc = {
+        "sender_id": user_id,
+        "recipient_id": recipient_id,
+        "order_id": order_id,
+        "message": message_text[:1000],  # Limit message length
+        "created_at": datetime.utcnow(),
+        "read": False,
+    }
+    await messages_col.insert_one(message_doc)
+
+    # Broadcast to recipient via Redis pub/sub
+    redis = await get_redis()
+    if redis:
+        await redis.publish(
+            f"user:{recipient_id}",
+            json.dumps({"type": "new_message", "data": message_doc}, default=str)
+        )
+    logger.info(f"Chat message from {user_id} to {recipient_id} for order {order_id}")
 
 
 async def handle_order_accepted(rider_id: str, order_id: str):
     """Handle rider accepting an order"""
-    # TODO: Implement order acceptance logic
-    pass
+    orders_col = get_collection("orders")
+    riders_col = get_collection("users")
+
+    # Update order with assigned rider
+    result = await orders_col.update_one(
+        {"_id": order_id, "status": {"$in": ["pending", "confirmed"]}},
+        {"$set": {
+            "driver_id": rider_id,
+            "status": "assigned",
+            "assigned_at": datetime.utcnow(),
+        }}
+    )
+
+    if result.modified_count == 0:
+        logger.warning(f"Rider {rider_id} tried to accept order {order_id} but it was not available")
+        return
+
+    # Update rider status to busy
+    await riders_col.update_one(
+        {"id": rider_id},
+        {"$set": {"status": "busy", "current_order_id": order_id}}
+    )
+
+    # Notify buyer and merchant via Redis
+    order = await orders_col.find_one({"_id": order_id})
+    if order:
+        redis = await get_redis()
+        if redis:
+            rider = await riders_col.find_one({"id": rider_id})
+            notification = json.dumps({
+                "type": "driver_assigned",
+                "order_id": order_id,
+                "rider_id": rider_id,
+                "rider_name": rider.get("name", "Driver") if rider else "Driver",
+            }, default=str)
+            await redis.publish(f"order:{order_id}", notification)
+
+    logger.info(f"Rider {rider_id} accepted order {order_id}")
 
 
 async def handle_delivery_completed(rider_id: str, order_id: str):
     """Handle rider completing a delivery"""
-    # TODO: Implement delivery completion logic
-    pass
+    orders_col = get_collection("orders")
+    riders_col = get_collection("users")
+
+    # Update order status to delivered
+    result = await orders_col.update_one(
+        {"_id": order_id, "driver_id": rider_id, "status": "in_transit"},
+        {"$set": {
+            "status": "delivered",
+            "delivered_at": datetime.utcnow(),
+        }}
+    )
+
+    if result.modified_count == 0:
+        logger.warning(f"Rider {rider_id} tried to complete order {order_id} but conditions not met")
+        return
+
+    # Update rider status back to available
+    await riders_col.update_one(
+        {"id": rider_id},
+        {"$set": {"status": "available", "current_order_id": None}}
+    )
+
+    # Notify buyer via Redis
+    redis = await get_redis()
+    if redis:
+        notification = json.dumps({
+            "type": "delivery_completed",
+            "order_id": order_id,
+            "rider_id": rider_id,
+        }, default=str)
+        await redis.publish(f"order:{order_id}", notification)
+
+    # Trigger payout and review request
+    try:
+        from app.celery_worker.tasks import process_merchant_payout, request_order_review
+        process_merchant_payout.delay(order_id)
+        request_order_review.delay(order_id)
+    except Exception as e:
+        logger.warning(f"Failed to queue post-delivery tasks for order {order_id}: {e}")
+
+    logger.info(f"Rider {rider_id} completed delivery for order {order_id}")
 
 
 async def update_offline_status(user_id: str):
-    """Update user offline status"""
-    # TODO: Update user status in database
-    pass
+    """Update user offline status in database"""
+    users_col = get_collection("users")
+    await users_col.update_one(
+        {"id": user_id},
+        {"$set": {
+            "status": "offline",
+            "last_seen": datetime.utcnow(),
+        }}
+    )
+    logger.info(f"User {user_id} marked as offline")

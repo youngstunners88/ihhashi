@@ -269,9 +269,13 @@ async def create_order(
         logger.error(f"Order creation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to create order. Please try again.")
     
-    # TODO: Send notification to merchant (outside transaction)
-    # TODO: Initiate payment if card/wallet (outside transaction)
-    
+    # Send notification to merchant (outside transaction)
+    try:
+        from app.celery_worker.tasks import notify_merchant_new_order
+        notify_merchant_new_order.delay(order_doc["id"], order_doc.get("merchant_id"))
+    except Exception as e:
+        logger.warning(f"Failed to queue merchant notification: {e}")
+
     logger.info(f"Order created: {order_doc['id']} by user {current_user.id}")
     
     return {
@@ -638,11 +642,19 @@ async def cancel_order(
         raise HTTPException(status_code=500, detail="Failed to cancel order")
     
     logger.info(f"Order cancelled: {order_id} by user {current_user.id}")
-    
-    # TODO: Refund if paid (trigger async refund process)
-    
+
+    # Trigger async refund if order was paid
+    refund_amount = 0
+    if order.get("payment_status") == "paid":
+        refund_amount = order["total"]
+        try:
+            from app.celery_worker.tasks import process_refund
+            process_refund.delay(order_id, "Order cancelled by customer", refund_amount)
+        except Exception as e:
+            logger.warning(f"Failed to queue refund for order {order_id}: {e}")
+
     return {
         "message": "Order cancelled",
         "order_id": order_id,
-        "refund_amount": order["total"] if order.get("payment_status") == "paid" else 0
+        "refund_amount": refund_amount
     }

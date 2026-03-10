@@ -268,7 +268,10 @@ async def create_payout(
     payments_col = get_collection("payments")
     
     # Verify user has sufficient balance
-    # TODO: Implement wallet/balance check
+    wallets_col = get_collection("wallets")
+    wallet = await wallets_col.find_one({"user_id": current_user.id})
+    if wallet and wallet.get("balance", 0) < payout.amount:
+        raise HTTPException(status_code=400, detail="Insufficient balance for payout")
     
     # Create payout record
     payout_reference = f"payout-{uuid.uuid4().hex[:12]}"
@@ -541,8 +544,12 @@ async def paystack_webhook(request: Request):
                 }}
             )
             
-            # TODO: Send push notification to merchant
-            # TODO: Trigger order confirmation flow
+            # Send notification to merchant about payment received
+            try:
+                from app.celery_worker.tasks import notify_merchant_new_order
+                notify_merchant_new_order.delay(str(payment["order_id"]), payment.get("merchant_id"))
+            except Exception as e:
+                logger.warning(f"Failed to queue merchant payment notification: {e}")
         
     elif event == "transfer.success":
         transfer_code = data.get("transfer_code")
@@ -555,7 +562,14 @@ async def paystack_webhook(request: Request):
             }}
         )
         
-        # TODO: Notify driver/merchant of successful payout
+        # Notify driver/merchant of successful payout
+        try:
+            payout_record = await payments_col.find_one({"transfer_code": transfer_code})
+            if payout_record:
+                from app.celery_worker.tasks import send_payout_notification
+                send_payout_notification.delay(payout_record.get("user_id"), payout_record.get("amount"), "success")
+        except Exception as e:
+            logger.warning(f"Failed to queue payout success notification: {e}")
         
     elif event == "transfer.failed":
         transfer_code = data.get("transfer_code")
@@ -569,7 +583,14 @@ async def paystack_webhook(request: Request):
             }}
         )
         
-        # TODO: Notify user of failed payout
+        # Notify user of failed payout
+        try:
+            payout_record = await payments_col.find_one({"transfer_code": transfer_code})
+            if payout_record:
+                from app.celery_worker.tasks import send_payout_notification
+                send_payout_notification.delay(payout_record.get("user_id"), payout_record.get("amount"), "failed")
+        except Exception as e:
+            logger.warning(f"Failed to queue payout failure notification: {e}")
         
     elif event == "refund.processed":
         reference = data.get("transaction_reference")

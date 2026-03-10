@@ -405,7 +405,7 @@ export function useRiderTracking(options: UseRiderTrackingOptions): UseRiderTrac
  */
 export interface UseMerchantNotificationsOptions {
   merchantId: string;
-  onNewOrder?: (order: any, event: WebSocketEvent) => void;
+  onNewOrder?: (order: OrderWithRealtime, event: WebSocketEvent) => void;
   onMessage?: (event: WebSocketEvent) => void;
   onError?: (error: Error) => void;
 }

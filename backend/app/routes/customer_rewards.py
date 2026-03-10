@@ -422,28 +422,50 @@ async def daily_checkin(current_user = Depends(get_current_user)):
     # Check if already checked in today
     db_instance = get_db()
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    
+
     existing = await db_instance.coin_transactions.find_one({
         "customer_id": current_user.id,
         "transaction_type": "daily_checkin",
         "created_at": {"$gte": today_start}
     })
-    
+
     if existing:
         raise HTTPException(status_code=400, detail="Already checked in today")
-    
+
+    # Calculate streak: count consecutive days with check-ins
+    streak = 1
+    check_date = today_start - timedelta(days=1)
+    for _ in range(30):  # Max streak lookback of 30 days
+        day_start = check_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        prev_checkin = await db_instance.coin_transactions.find_one({
+            "customer_id": current_user.id,
+            "transaction_type": "daily_checkin",
+            "created_at": {"$gte": day_start, "$lt": day_end}
+        })
+        if prev_checkin:
+            streak += 1
+            check_date -= timedelta(days=1)
+        else:
+            break
+
+    # Streak bonus: extra coins for consecutive days (max 7 bonus coins)
+    bonus = min(streak, 7)
+    total_coins = 5 + bonus
+
     # Award check-in bonus
     transaction = await add_coins_to_customer(
         current_user.id,
-        5,
-        "Daily check-in bonus",
+        total_coins,
+        f"Daily check-in bonus (streak: {streak} days)",
         "daily_checkin"
     )
-    
+
     return {
         "success": True,
-        "coins_earned": 5,
+        "coins_earned": total_coins,
         "new_balance": transaction.balance_after if transaction else 0,
-        "message": "Check-in successful! +5 Hashi Coins",
-        "streak": 1  # TODO: Implement streak tracking
+        "message": f"Check-in successful! +{total_coins} Hashi Coins (streak: {streak} days)",
+        "streak": streak,
+        "streak_bonus": bonus
     }

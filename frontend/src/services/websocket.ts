@@ -45,6 +45,7 @@ class WebSocketService {
   private connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   private subscribedRooms: Set<string> = new Set();
   private pendingMessages: Array<WebSocketEvent> = [];
+  private connectingPromise: Promise<void> | null = null;
 
   // Default options
   private defaultOptions: WebSocketOptions = {
@@ -73,10 +74,16 @@ class WebSocketService {
    * Connect to WebSocket
    */
   connect(endpoint: string = '/ws', options: WebSocketOptions = {}): Promise<void> {
-    return new Promise((resolve, reject) => {
+    // Prevent concurrent connection attempts (race condition guard)
+    if (this.connectingPromise && this.connectionStatus === ConnectionStatus.CONNECTING) {
+      return this.connectingPromise;
+    }
+
+    this.connectingPromise = new Promise((resolve, reject) => {
       this.options = { ...this.defaultOptions, ...options };
-      
+
       if (this.isConnected()) {
+        this.connectingPromise = null;
         resolve();
         return;
       }
@@ -103,6 +110,7 @@ class WebSocketService {
           this.processPendingMessages();
           this.resubscribeToRooms();
           this.options.onConnect?.();
+          this.connectingPromise = null;
           resolve();
         };
 
@@ -114,24 +122,29 @@ class WebSocketService {
           console.error('[WebSocket] Error:', error);
           this.connectionStatus = ConnectionStatus.ERROR;
           this.options.onError?.(error);
+          this.connectingPromise = null;
           reject(error);
         };
 
         this.ws.onclose = (event) => {
           console.log('[WebSocket] Disconnected:', event.code, event.reason);
           this.connectionStatus = ConnectionStatus.DISCONNECTED;
+          this.connectingPromise = null;
           this.stopHeartbeat();
           this.options.onDisconnect?.();
-          
+
           if (this.options.autoReconnect && this.reconnectCount < (this.options.reconnectAttempts || 5)) {
             this.attemptReconnect(endpoint);
           }
         };
       } catch (error) {
         this.connectionStatus = ConnectionStatus.ERROR;
+        this.connectingPromise = null;
         reject(error);
       }
     });
+
+    return this.connectingPromise;
   }
 
   /**
