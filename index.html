@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iHhashi - Premium Township Delivery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1A1A1A;
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 512px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: #1A1A1A;
+        }
+        
+        /* Splash Screen */
+        .splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeOut 0.5s ease-in-out 1.8s forwards;
+        }
+        
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+        
+        .splash-logo {
+            font-size: 48px;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin-bottom: 20px;
+        }
+        
+        .splash-dots {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .dot {
+            width: 12px;
+            height: 12px;
+            background: #1A1A1A;
+            border-radius: 50%;
+            animation: bounce 0.6s ease-in-out infinite;
+        }
+        
+        .dot:nth-child(2) { animation-delay: 0.1s; }
+        .dot:nth-child(3) { animation-delay: 0.2s; }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 512px;
+            background: #252525;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            border-top: 1px solid #333;
+            z-index: 100;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #888;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        
+        .nav-item.active {
+            color: #FFD700;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+        }
+        
+        /* Main Content */
+        .main {
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .location {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .location strong {
+            color: #fff;
+        }
+        
+        .profile-btn {
+            width: 40px;
+            height: 40px;
+            background: #FFD700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1A1A1A;
+            font-weight: 600;
+        }
+        
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            color: #1A1A1A;
+        }
+        
+        .hero h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .hero p {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 16px;
+        }
+        
+        .hero-btn {
+            background: #1A1A1A;
+            color: #FFD700;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        /* Categories */
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .categories {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            padding-bottom: 8px;
+        }
+        
+        .category {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 80px;
+        }
+        
+        .category-icon {
+            width: 64px;
+            height: 64px;
+            background: #252525;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+        
+        .category-name {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        /* Merchants */
+        .merchants {
+            margin-bottom: 24px;
+        }
+        
+        .merchant {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: #252525;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .merchant-img {
+            width: 80px;
+            height: 80px;
+            background: #333;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+        
+        .merchant-info {
+            flex: 1;
+        }
+        
+        .merchant-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .merchant-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        
+        .rating {
+            color: #FFD700;
+        }
+        
+        .delivery-time {
+            background: #1A1A1A;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        /* Why iHhashi */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .feature {
+            background: #252525;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .feature-desc {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 12px;
+        }
+        
+        .footer-links a {
+            color: #FFD700;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div class="splash">
+        <div class="splash-logo">iHhashi</div>
+        <div class="splash-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Header -->
+            <header class="header">
+                <div class="location">
+                    <span>📍</span>
+                    <span>Deliver to <strong>Soweto</strong></span>
+                </div>
+                <div class="profile-btn">JD</div>
+            </header>
+            
+            <!-- Hero -->
+            <section class="hero">
+                <h1>Premium Township Delivery</h1>
+                <p>Your favorite local food, delivered fast. Supporting township businesses.</p>
+                <button class="hero-btn">Order Now</button>
+            </section>
+            
+            <!-- Categories -->
+            <h2 class="section-title">Categories</h2>
+            <div class="categories">
+                <div class="category">
+                    <div class="category-icon">🍔</div>
+                    <span class="category-name">Burgers</span>
+                </div>
+                <div class="category">
+                    <div class="category-icon">🍕</div>
+                    <span class="category-name">Pizza</span>
+                </div>
+                <div class="category">
+                    <div class="category-icon">🍗</div>
+                    <span class="category-name">Chicken</span>
+                </div>
+                <div class="category">
+                    <div class="category-icon">🥙</div>
+                    <span class="category-name">Kota</span>
+                </div>
+                <div class="category">
+                    <div class="category-icon">🍛</div>
+                    <span class="category-name">Curry</span>
+                </div>
+                <div class="category">
+                    <div class="category-icon">🥤</div>
+                    <span class="category-name">Drinks</span>
+                </div>
+                <div class="category">
+                    <div class="category-icon">🥗</div>
+                    <span class="category-name">Healthy</span>
+                </div>
+            </div>
+            
+            <!-- Merchants -->
+            <h2 class="section-title">Popular Near You</h2>
+            <div class="merchants">
+                <div class="merchant">
+                    <div class="merchant-img">🍔</div>
+                    <div class="merchant-info">
+                        <div class="merchant-name">Kota Kings</div>
+                        <div class="merchant-meta">
+                            <span class="rating">⭐ 4.8</span>
+                            <span>•</span>
+                            <span>2.3 km</span>
+                        </div>
+                        <div class="delivery-time">25-35 min • R15 delivery</div>
+                    </div>
+                </div>
+                
+                <div class="merchant">
+                    <div class="merchant-img">🍗</div>
+                    <div class="merchant-info">
+                        <div class="merchant-name">Soweto Fried Chicken</div>
+                        <div class="merchant-meta">
+                            <span class="rating">⭐ 4.6</span>
+                            <span>•</span>
+                            <span>1.8 km</span>
+                        </div>
+                        <div class="delivery-time">20-30 min • Free delivery</div>
+                    </div>
+                </div>
+                
+                <div class="merchant">
+                    <div class="merchant-img">🍕</div>
+                    <div class="merchant-info">
+                        <div class="merchant-name">Mama's Pizza</div>
+                        <div class="merchant-meta">
+                            <span class="rating">⭐ 4.5</span>
+                            <span>•</span>
+                            <span>3.1 km</span>
+                        </div>
+                        <div class="delivery-time">35-45 min • R10 delivery</div>
+                    </div>
+                </div>
+                
+                <div class="merchant">
+                    <div class="merchant-img">🥙</div>
+                    <div class="merchant-info">
+                        <div class="merchant-name">Gatsby House</div>
+                        <div class="merchant-meta">
+                            <span class="rating">⭐ 4.9</span>
+                            <span>•</span>
+                            <span>0.9 km</span>
+                        </div>
+                        <div class="delivery-time">15-25 min • R5 delivery</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Why iHhashi -->
+            <h2 class="section-title">Why iHhashi?</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-title">Fast Delivery</div>
+                    <div class="feature-desc">Average 25 minutes</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">💰</div>
+                    <div class="feature-title">Low Fees</div>
+                    <div class="feature-desc">From R5 delivery</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🏪</div>
+                    <div class="feature-title">Local First</div>
+                    <div class="feature-desc">Support township businesses</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🪙</div>
+                    <div class="feature-title">Earn Rewards</div>
+                    <div class="feature-desc">iHhashi Coins on every order</div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="footer">
+                <p>© 2026 iHhashi. Empowering township economies.</p>
+                <div class="footer-links">
+                    <a href="#">About</a>
+                    <a href="#">Terms</a>
+                    <a href="#">Privacy</a>
+                    <a href="#">Contact</a>
+                </div>
+            </footer>
+        </main>
+        
+        <!-- Bottom Navigation -->
+        <nav class="nav">
+            <a href="#" class="nav-item active">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                <span>Browse</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">🛒</span>
+                <span>Cart</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">📦</span>
+                <span>Orders</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">👤</span>
+                <span>Profile</span>
+            </a>
+        </nav>
+    </div>
+</body>
+</html>
