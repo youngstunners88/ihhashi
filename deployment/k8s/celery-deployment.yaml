@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: delivery-app
+  labels:
+    app: celery-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: celery-worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+    spec:
+      containers:
+        - name: celery-worker
+          image: ghcr.io/youngstunners88/ihhashi/backend:latest
+          command: ["celery", "-A", "celery_worker.tasks", "worker", "--loglevel=info", "--concurrency=4"]
+          envFrom:
+            - configMapRef:
+                name: delivery-config
+            - configMapRef:
+                name: mongo-config
+            - secretRef:
+                name: delivery-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+  namespace: delivery-app
+  labels:
+    app: celery-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-beat
+  template:
+    metadata:
+      labels:
+        app: celery-beat
+    spec:
+      containers:
+        - name: celery-beat
+          image: ghcr.io/youngstunners88/ihhashi/backend:latest
+          command: ["celery", "-A", "celery_worker.tasks", "beat", "--loglevel=info"]
+          envFrom:
+            - configMapRef:
+                name: delivery-config
+            - configMapRef:
+                name: mongo-config
+            - secretRef:
+                name: delivery-secrets
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"

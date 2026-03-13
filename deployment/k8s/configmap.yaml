@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: delivery-config
+  namespace: delivery-app
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  MONGODB_DB_NAME: "delivery_app"
+  REDIS_URL: "redis://redis:6379/0"
+  PUBSUB_ORDER_CHANNEL: "order_updates"
+  PUBSUB_RIDER_CHANNEL: "rider_updates"
+  PUBSUB_USER_CHANNEL: "user_updates"
+  API_V1_PREFIX: "/api/v1"
+  CORS_ORIGINS: '["*"]'
+  WS_HEARTBEAT_INTERVAL: "30"
+  WS_PING_TIMEOUT: "10"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-config
+  namespace: delivery-app
+data:
+  MONGODB_MAX_POOL_SIZE: "100"
+  MONGODB_MIN_POOL_SIZE: "10"
+  MONGODB_MAX_IDLE_TIME_MS: "60000"
+  MONGODB_WAIT_QUEUE_TIMEOUT_MS: "5000"
+  MONGODB_CONNECT_TIMEOUT_MS: "10000"
+  MONGODB_SOCKET_TIMEOUT_MS: "30000"
+  MONGODB_SERVER_SELECTION_TIMEOUT_MS: "30000"
